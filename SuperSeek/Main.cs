@@ -18,18 +18,23 @@ namespace SuperSeek
             InitializeComponent();
         }
 
-        private async void openFolderToolStripMenuItem_Click(object sender, EventArgs e)
+        private async void OpenFolder(object sender, EventArgs e)
         {
-            toolStripStatusLabel2.Text = "Status: Waiting for user...";
-            folderBrowserDialog1.ShowDialog();
-            CurrentFolder = folderBrowserDialog1.SelectedPath;
-            toolStripStatusLabel1.Text = "Current Folder: " + CurrentFolder;
-            toolStripStatusLabel2.Text = "Status: Clearing...";
+            tsslStatus.Text = "Status: Waiting for user...";
+            fbMain.ShowDialog();
+            if (!Directory.Exists(fbMain.SelectedPath))
+            {
+                tsslStatus.Text = "Status: Idle";
+                return;
+            }
+            CurrentFolder = fbMain.SelectedPath;
+            tsslCurrentFolder.Text = "Current Folder: " + CurrentFolder;
+            tsslStatus.Text = "Status: Clearing...";
             Enabled = false;
             ExtensionsAndFiles.Clear();
-            listView2.Items.Clear();
+            lvExtensions.Items.Clear();
             SemaphoreSlim ss = new(1);
-            toolStripStatusLabel2.Text = "Status: Gathering files...";
+            tsslStatus.Text = "Status: Gathering files...";
             await LoopFilesAsync(new DirectoryInfo(CurrentFolder), async (file) =>
             {
                 var ext = file.Extension.ToLower();
@@ -38,36 +43,38 @@ namespace SuperSeek
                 ExtensionsAndFiles[ext].Add(file.FullName);
                 ss.Release();
             });
-            toolStripStatusLabel2.Text = "Status: Rendering extension list...";
-            listView2.BeginUpdate();
+            tsslStatus.Text = "Status: Rendering extension list...";
+            lvExtensions.BeginUpdate();
             foreach (var item in ExtensionsAndFiles)
             {
                 ListViewItem lvi = new([item.Key, item.Value.Count.ToString()]);
-                listView2.Items.Add(lvi);
+                lvExtensions.Items.Add(lvi);
             }
-            listView2.EndUpdate();
-            toolStripStatusLabel2.Text = "Status: Idle";
+            lvExtensions.EndUpdate();
+            tsslStatus.Text = "Status: GC Collect...";
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
+            tsslStatus.Text = "Status: Idle";
             Enabled = true;
         }
 
-        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        private void Exit(object sender, EventArgs e)
         {
             Close();
         }
 
-        private void fileExtensionFilterToolStripMenuItem_Click(object sender, EventArgs e)
+        private void ToggleExtensionList(object sender, EventArgs e)
         {
-            splitContainer1.Panel1Collapsed = !splitContainer1.Panel1Collapsed;
-            fileExtensionFilterToolStripMenuItem.Checked = !splitContainer1.Panel1Collapsed;
+            scMain.Panel1Collapsed = !scMain.Panel1Collapsed;
+            miToggleExtensions.Checked = !scMain.Panel1Collapsed;
         }
 
-        private void Main_Load(object sender, EventArgs e)
+        private void Initialize(object sender, EventArgs e)
         {
-            fileExtensionFilterToolStripMenuItem.Checked = !splitContainer1.Panel1Collapsed;
-            toolStripStatusLabel1.Text = "Current Folder: " + CurrentFolder;
+            miToggleExtensions.Checked = !scMain.Panel1Collapsed;
+            tsslCurrentFolder.Text = "Current Folder: " + CurrentFolder;
             Task.Run(() =>
             {
-                Invoke(openFolderToolStripMenuItem.PerformClick);
+                Invoke(miOpenFolder.PerformClick);
             });
         }
 
@@ -90,51 +97,52 @@ namespace SuperSeek
             });
         }
 
-        private void listView2_ItemChecked(object sender, ItemCheckedEventArgs e)
+        private void lvExtensions_ItemChecked(object sender, ItemCheckedEventArgs e)
         {
             if (!Enabled) return;
             SelectedFiles.Clear();
-            foreach (ListViewItem lvi in listView2.CheckedItems)
+            foreach (ListViewItem lvi in lvExtensions.CheckedItems)
             {
                 SelectedFiles.AddRange(ExtensionsAndFiles[lvi.Text]);
             }
-            toolStripStatusLabel3.Text = "Selected Files: " + SelectedFiles.Count;
+            tsslSelectedFiles.Text = "Selected Files: " + SelectedFiles.Count;
         }
 
-        private void textBox1_TextChanged(object sender, EventArgs e)
+        private void FilterExtensions(object sender, EventArgs e)
         {
-            listView2.SelectedItems.Clear();
-            var item = listView2.FindItemWithText('.' + textBox1.Text);
+            lvExtensions.SelectedItems.Clear();
+            var item = lvExtensions.FindItemWithText('.' + tbExtensionSearch.Text);
             item?.Selected = true;
             item?.EnsureVisible();
         }
 
-        private void textBox1_KeyDown(object sender, KeyEventArgs e)
+        private void tbExtensionSearch_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Space)
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;
-                var item = listView2.FindItemWithText('.' + textBox1.Text);
+                var item = lvExtensions.FindItemWithText('.' + tbExtensionSearch.Text);
                 item?.Checked = !item.Checked;
             }
         }
 
-        private async void button1_Click(object sender, EventArgs e)
+        private async void Search(object sender, EventArgs e)
         {
             Enabled = false;
-            listView1.BeginUpdate();
-            listView1.Items.Clear();
-            Regex regex = new(textBox2.Text, RegexOptions.IgnoreCase);
+            lvResults.BeginUpdate();
+            lvResults.Items.Clear();
+            Regex regex = new(tbMainSearch.Text, RegexOptions.IgnoreCase);
             var matches = await SearchFilesAsync(SelectedFiles, regex);
             foreach (var match in matches)
             {
                 foreach (Match rmatch in match.Value)
                 {
-                    listView1.Items.Add(new ListViewItem([match.Key, rmatch.Value]));
+                    lvResults.Items.Add(new ListViewItem([match.Key, rmatch.Value]));
                 }
             }
-            listView1.EndUpdate();
+            lvResults.EndUpdate();
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
             Enabled = true;
         }
 
