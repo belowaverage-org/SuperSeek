@@ -53,9 +53,9 @@
             tsslStatus = new ToolStripStatusLabel();
             tsslCurrentFolder = new ToolStripStatusLabel();
             tsslSelectedFiles = new ToolStripStatusLabel();
+            tsslScanned = new ToolStripStatusLabel();
             tsslResults = new ToolStripStatusLabel();
             fbMain = new FolderBrowserDialog();
-            tsslScanned = new ToolStripStatusLabel();
             msMain.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)scMain).BeginInit();
             scMain.Panel1.SuspendLayout();
@@ -87,21 +87,21 @@
             // miOpenFolder
             // 
             miOpenFolder.Name = "miOpenFolder";
-            miOpenFolder.Size = new Size(148, 22);
+            miOpenFolder.Size = new Size(180, 22);
             miOpenFolder.Text = "&Open Folder...";
             miOpenFolder.Click += OpenFolder;
             // 
             // tssFile1
             // 
             tssFile1.Name = "tssFile1";
-            tssFile1.Size = new Size(145, 6);
+            tssFile1.Size = new Size(177, 6);
             // 
             // miExit
             // 
             miExit.Name = "miExit";
-            miExit.Size = new Size(148, 22);
+            miExit.Size = new Size(180, 22);
             miExit.Text = "&Exit";
-            miExit.Click += Exit;
+            miExit.Click += miExit_Click;
             // 
             // miView
             // 
@@ -259,6 +259,7 @@
             tbMainSearch.PlaceholderText = "Regular Expressions";
             tbMainSearch.Size = new Size(464, 28);
             tbMainSearch.TabIndex = 1;
+            tbMainSearch.KeyDown += tbMainSearch_KeyDown;
             // 
             // btnSearchOrCancel
             // 
@@ -309,6 +310,12 @@
             tsslSelectedFiles.Size = new Size(97, 17);
             tsslSelectedFiles.Text = "Selected Files: {0}";
             // 
+            // tsslScanned
+            // 
+            tsslScanned.Name = "tsslScanned";
+            tsslScanned.Size = new Size(72, 17);
+            tsslScanned.Text = "Scanned: {0}";
+            // 
             // tsslResults
             // 
             tsslResults.Name = "tsslResults";
@@ -318,12 +325,6 @@
             // fbMain
             // 
             fbMain.RootFolder = Environment.SpecialFolder.History;
-            // 
-            // tsslScanned
-            // 
-            tsslScanned.Name = "tsslScanned";
-            tsslScanned.Size = new Size(72, 17);
-            tsslScanned.Text = "Scanned: {0}";
             // 
             // Main
             // 
@@ -336,6 +337,7 @@
             MainMenuStrip = msMain;
             Name = "Main";
             Text = "SuperSeek";
+            FormClosing += Main_FormClosing;
             Load += Initialize;
             msMain.ResumeLayout(false);
             msMain.PerformLayout();

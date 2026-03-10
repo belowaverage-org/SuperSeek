@@ -7,19 +7,20 @@ namespace SuperSeek
     {
         private Dictionary<string, List<string>> ExtensionsAndFiles = new();
         private List<string> SelectedFiles = new();
-        private List<(string, int)> Matches = new();
+        private List<(string, int)> Results = new();
         private uint Scanned = 0;
         private string CurrentFolder = "C:\\";
         private Dictionary<Component, string> LabelCache = new();
         private CancellationTokenSource CTS = new();
         private System.Windows.Forms.Timer LabelTimer = new();
         private bool _Running = false;
-        private bool Running {
+        private bool Running
+        {
             get
             {
                 return _Running;
             }
-            set 
+            set
             {
                 _Running = value;
                 if (_Running)
@@ -52,12 +53,25 @@ namespace SuperSeek
 
         private async void LabelTimer_Tick(object? sender, EventArgs e)
         {
-            SetLabel(tsslResults, Matches.Count.ToString());
+            SetLabel(tsslResults, Results.Count.ToString());
             SetLabel(tsslScanned, Scanned.ToString());
+            SetLabel(tsslSelectedFiles, SelectedFiles.Count.ToString());
             if (Running)
             {
-                tspbMain.Maximum = SelectedFiles.Count;
-                tspbMain.Value = (int)Scanned;
+                if (Scanned > 0)
+                {
+                    tspbMain.Style = ProgressBarStyle.Continuous;
+                    tspbMain.Maximum = SelectedFiles.Count;
+                    tspbMain.Value = (int)Scanned;
+                }
+                else
+                {
+                    tspbMain.Style = ProgressBarStyle.Marquee;
+                }
+            }
+            else
+            {
+                tspbMain.Style = ProgressBarStyle.Continuous;
             }
         }
 
@@ -81,10 +95,25 @@ namespace SuperSeek
             }
             var originalText = LabelCache[Label];
             uint i = 0;
-            foreach(var item in Strings)
+            foreach (var item in Strings)
             {
                 textProperty.SetValue(Label, originalText.Replace($"{{{i}}}", item));
             }
+        }
+
+        private void ClearExtensions()
+        {
+            lvExtensions.Items.Clear();
+            SelectedFiles.Clear();
+            ExtensionsAndFiles.Clear();
+            ClearResults();
+        }
+
+        private void ClearResults()
+        {
+            lvResults.Items.Clear();
+            Results.Clear();
+            Scanned = 0;
         }
 
         private async void OpenFolder(object sender, EventArgs e)
@@ -98,10 +127,9 @@ namespace SuperSeek
             }
             CurrentFolder = fbMain.SelectedPath;
             SetLabel(tsslCurrentFolder, CurrentFolder);
-            SetLabel(tsslStatus, "Clearing...");
             Running = true;
-            ExtensionsAndFiles.Clear();
-            lvExtensions.Items.Clear();
+            SetLabel(tsslStatus, "Clearing...");
+            ClearExtensions();
             SemaphoreSlim ss = new(1);
             SetLabel(tsslStatus, "Gathering files...");
             await DiscoverFilesAsync(new DirectoryInfo(CurrentFolder), async (file) =>
@@ -130,9 +158,9 @@ namespace SuperSeek
             Running = false;
         }
 
-        private void Exit(object sender, EventArgs e)
+        private async void miExit_Click(object sender, EventArgs e)
         {
-            Close();
+            await Cancel(true);
         }
 
         private void ToggleExtensionList(object sender, EventArgs e)
@@ -171,7 +199,6 @@ namespace SuperSeek
             {
                 SelectedFiles.AddRange(ExtensionsAndFiles[lvi.Text]);
             }
-            SetLabel(tsslSelectedFiles, SelectedFiles.Count.ToString());
         }
 
         private void FilterExtensions(object sender, EventArgs e)
@@ -193,10 +220,16 @@ namespace SuperSeek
             }
         }
 
-        private async void Cancel()
+        private async Task Cancel(bool Close = false)
         {
             SetLabel(tsslStatus, "Cancelling...");
             await CTS.CancelAsync();
+            if (Close)
+            {
+                Running = false;
+                this.Close();
+                return;
+            }
             CTS = new();
         }
 
@@ -204,30 +237,27 @@ namespace SuperSeek
         {
             if (Running)
             {
-                Cancel();
+                await Cancel();
             }
             else
             {
                 Running = true;
                 lvResults.BeginUpdate();
-                lvResults.Items.Clear();
+                ClearResults();
                 Regex regex = new(tbMainSearch.Text, RegexOptions.IgnoreCase);
                 await ScanFilesAsync(SelectedFiles, regex);
-                foreach (var match in Matches)
+                foreach (var match in Results)
                 {
                     lvResults.Items.Add(new ListViewItem([match.Item1, match.Item2.ToString()]));
                 }
                 lvResults.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
                 lvResults.EndUpdate();
-                
                 Running = false;
             }
         }
 
         private async Task ScanFilesAsync(List<string> Files, Regex Regex)
         {
-            Scanned = 0;
-            Matches.Clear();
             List<Task> Tasks = new();
             foreach (var file in Files)
             {
@@ -240,7 +270,7 @@ namespace SuperSeek
                         var content = await File.ReadAllTextAsync(file, CTS.Token);
                         if (CTS.IsCancellationRequested) return;
                         var rmatches = Regex.Count(content);
-                        if (rmatches > 0) Matches.Add((file, rmatches));
+                        if (rmatches > 0) Results.Add((file, rmatches));
                         Scanned++;
                     }
                     catch
@@ -250,6 +280,25 @@ namespace SuperSeek
                 }));
             }
             await Task.WhenAll(Tasks);
+        }
+
+        private void Main_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (Running)
+            {
+                e.Cancel = true;
+                _ = Cancel(true);
+            }
+        }
+
+        private void tbMainSearch_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                btnSearchOrCancel.PerformClick();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
         }
     }
 }
