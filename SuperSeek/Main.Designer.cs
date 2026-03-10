@@ -43,16 +43,19 @@
             chFiles = new ColumnHeader();
             tlpResults = new TableLayoutPanel();
             lvResults = new ListView();
+            chFile = new ColumnHeader();
+            chMatches = new ColumnHeader();
             tlpSearch = new TableLayoutPanel();
             tbMainSearch = new TextBox();
-            btnSearch = new Button();
+            btnSearchOrCancel = new Button();
             ssMain = new StatusStrip();
+            tspbMain = new ToolStripProgressBar();
             tsslStatus = new ToolStripStatusLabel();
-            tsslSelectedFiles = new ToolStripStatusLabel();
             tsslCurrentFolder = new ToolStripStatusLabel();
+            tsslSelectedFiles = new ToolStripStatusLabel();
+            tsslResults = new ToolStripStatusLabel();
             fbMain = new FolderBrowserDialog();
-            chFile = new ColumnHeader();
-            chMatchingText = new ColumnHeader();
+            tsslScanned = new ToolStripStatusLabel();
             msMain.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)scMain).BeginInit();
             scMain.Panel1.SuspendLayout();
@@ -64,7 +67,7 @@
             ssMain.SuspendLayout();
             SuspendLayout();
             // 
-            // menuStrip1
+            // msMain
             // 
             msMain.Items.AddRange(new ToolStripItem[] { miFile, miView });
             msMain.Location = new Point(0, 0);
@@ -74,40 +77,40 @@
             msMain.TabIndex = 1;
             msMain.Text = "msMain";
             // 
-            // fileToolStripMenuItem
+            // miFile
             // 
             miFile.DropDownItems.AddRange(new ToolStripItem[] { miOpenFolder, tssFile1, miExit });
             miFile.Name = "miFile";
             miFile.Size = new Size(37, 20);
             miFile.Text = "&File";
             // 
-            // openFolderToolStripMenuItem
+            // miOpenFolder
             // 
             miOpenFolder.Name = "miOpenFolder";
             miOpenFolder.Size = new Size(148, 22);
             miOpenFolder.Text = "&Open Folder...";
             miOpenFolder.Click += OpenFolder;
             // 
-            // toolStripSeparator1
+            // tssFile1
             // 
             tssFile1.Name = "tssFile1";
             tssFile1.Size = new Size(145, 6);
             // 
-            // exitToolStripMenuItem
+            // miExit
             // 
             miExit.Name = "miExit";
             miExit.Size = new Size(148, 22);
             miExit.Text = "&Exit";
             miExit.Click += Exit;
             // 
-            // viewToolStripMenuItem
+            // miView
             // 
             miView.DropDownItems.AddRange(new ToolStripItem[] { miToggleExtensions });
             miView.Name = "miView";
             miView.Size = new Size(44, 20);
             miView.Text = "&View";
             // 
-            // fileExtensionFilterToolStripMenuItem
+            // miToggleExtensions
             // 
             miToggleExtensions.Checked = true;
             miToggleExtensions.CheckState = CheckState.Checked;
@@ -116,19 +119,19 @@
             miToggleExtensions.Text = "File Extension Filter";
             miToggleExtensions.Click += ToggleExtensionList;
             // 
-            // splitContainer1
+            // scMain
             // 
             scMain.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             scMain.Location = new Point(5, 30);
             scMain.Margin = new Padding(0);
             scMain.Name = "scMain";
             // 
-            // splitContainer1.Panel1
+            // scMain.Panel1
             // 
             scMain.Panel1.Controls.Add(tlpExtensions);
             scMain.Panel1.Padding = new Padding(0, 1, 0, 0);
             // 
-            // splitContainer1.Panel2
+            // scMain.Panel2
             // 
             scMain.Panel2.Controls.Add(tlpResults);
             scMain.Size = new Size(773, 403);
@@ -136,7 +139,7 @@
             scMain.SplitterWidth = 5;
             scMain.TabIndex = 2;
             // 
-            // tableLayoutPanel3
+            // tlpExtensions
             // 
             tlpExtensions.ColumnCount = 1;
             tlpExtensions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
@@ -152,7 +155,7 @@
             tlpExtensions.Size = new Size(224, 402);
             tlpExtensions.TabIndex = 2;
             // 
-            // textBox1
+            // tbExtensionSearch
             // 
             tbExtensionSearch.Dock = DockStyle.Fill;
             tbExtensionSearch.Location = new Point(0, 0);
@@ -165,7 +168,7 @@
             tbExtensionSearch.TextChanged += FilterExtensions;
             tbExtensionSearch.KeyDown += tbExtensionSearch_KeyDown;
             // 
-            // listView2
+            // lvExtensions
             // 
             lvExtensions.CheckBoxes = true;
             lvExtensions.Columns.AddRange(new ColumnHeader[] { chExtension, chFiles });
@@ -181,17 +184,17 @@
             lvExtensions.View = View.Details;
             lvExtensions.ItemChecked += lvExtensions_ItemChecked;
             // 
-            // columnHeader1
+            // chExtension
             // 
             chExtension.Text = "Extension";
             chExtension.Width = 125;
             // 
-            // columnHeader2
+            // chFiles
             // 
             chFiles.Text = "Files";
             chFiles.TextAlign = HorizontalAlignment.Right;
             // 
-            // tableLayoutPanel2
+            // tlpResults
             // 
             tlpResults.ColumnCount = 1;
             tlpResults.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
@@ -207,9 +210,9 @@
             tlpResults.Size = new Size(544, 403);
             tlpResults.TabIndex = 1;
             // 
-            // listView1
+            // lvResults
             // 
-            lvResults.Columns.AddRange(new ColumnHeader[] { chFile, chMatchingText });
+            lvResults.Columns.AddRange(new ColumnHeader[] { chFile, chMatches });
             lvResults.Dock = DockStyle.Fill;
             lvResults.FullRowSelect = true;
             lvResults.Location = new Point(0, 35);
@@ -220,13 +223,23 @@
             lvResults.UseCompatibleStateImageBehavior = false;
             lvResults.View = View.Details;
             // 
-            // tableLayoutPanel1
+            // chFile
+            // 
+            chFile.Text = "File";
+            chFile.Width = 300;
+            // 
+            // chMatches
+            // 
+            chMatches.Text = "Matches";
+            chMatches.Width = 200;
+            // 
+            // tlpSearch
             // 
             tlpSearch.ColumnCount = 2;
             tlpSearch.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             tlpSearch.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80F));
             tlpSearch.Controls.Add(tbMainSearch, 0, 0);
-            tlpSearch.Controls.Add(btnSearch, 1, 0);
+            tlpSearch.Controls.Add(btnSearchOrCancel, 1, 0);
             tlpSearch.Dock = DockStyle.Fill;
             tlpSearch.Location = new Point(0, 0);
             tlpSearch.Margin = new Padding(0);
@@ -236,7 +249,7 @@
             tlpSearch.Size = new Size(544, 30);
             tlpSearch.TabIndex = 1;
             // 
-            // textBox2
+            // tbMainSearch
             // 
             tbMainSearch.Dock = DockStyle.Fill;
             tbMainSearch.Location = new Point(0, 1);
@@ -247,22 +260,22 @@
             tbMainSearch.Size = new Size(464, 28);
             tbMainSearch.TabIndex = 1;
             // 
-            // button1
+            // btnSearchOrCancel
             // 
-            btnSearch.Dock = DockStyle.Fill;
-            btnSearch.FlatStyle = FlatStyle.System;
-            btnSearch.Location = new Point(468, 0);
-            btnSearch.Margin = new Padding(4, 0, 0, 0);
-            btnSearch.Name = "btnSearch";
-            btnSearch.Size = new Size(76, 30);
-            btnSearch.TabIndex = 2;
-            btnSearch.Text = "Search";
-            btnSearch.UseVisualStyleBackColor = true;
-            btnSearch.Click += Search;
+            btnSearchOrCancel.Dock = DockStyle.Fill;
+            btnSearchOrCancel.FlatStyle = FlatStyle.System;
+            btnSearchOrCancel.Location = new Point(468, 0);
+            btnSearchOrCancel.Margin = new Padding(4, 0, 0, 0);
+            btnSearchOrCancel.Name = "btnSearchOrCancel";
+            btnSearchOrCancel.Size = new Size(76, 30);
+            btnSearchOrCancel.TabIndex = 2;
+            btnSearchOrCancel.Text = "Search";
+            btnSearchOrCancel.UseVisualStyleBackColor = true;
+            btnSearchOrCancel.Click += SearchOrCancel;
             // 
-            // statusStrip1
+            // ssMain
             // 
-            ssMain.Items.AddRange(new ToolStripItem[] { tsslStatus, tsslSelectedFiles, tsslCurrentFolder });
+            ssMain.Items.AddRange(new ToolStripItem[] { tspbMain, tsslStatus, tsslCurrentFolder, tsslSelectedFiles, tsslScanned, tsslResults });
             ssMain.Location = new Point(0, 439);
             ssMain.Name = "ssMain";
             ssMain.RenderMode = ToolStripRenderMode.Professional;
@@ -270,40 +283,47 @@
             ssMain.TabIndex = 3;
             ssMain.Text = "ssMain";
             // 
-            // toolStripStatusLabel2
+            // tspbMain
+            // 
+            tspbMain.Name = "tspbMain";
+            tspbMain.Size = new Size(100, 16);
+            // 
+            // tsslStatus
             // 
             tsslStatus.DisplayStyle = ToolStripItemDisplayStyle.Text;
             tsslStatus.Name = "tsslStatus";
-            tsslStatus.Size = new Size(64, 17);
-            tsslStatus.Text = "Status: Idle";
+            tsslStatus.Size = new Size(59, 17);
+            tsslStatus.Text = "Status: {0}";
             // 
-            // toolStripStatusLabel3
-            // 
-            tsslSelectedFiles.DisplayStyle = ToolStripItemDisplayStyle.Text;
-            tsslSelectedFiles.Name = "tsslSelectedFiles";
-            tsslSelectedFiles.Size = new Size(89, 17);
-            tsslSelectedFiles.Text = "Selected Files: 0";
-            // 
-            // toolStripStatusLabel1
+            // tsslCurrentFolder
             // 
             tsslCurrentFolder.DisplayStyle = ToolStripItemDisplayStyle.Text;
             tsslCurrentFolder.Name = "tsslCurrentFolder";
-            tsslCurrentFolder.Size = new Size(105, 17);
-            tsslCurrentFolder.Text = "Current Folder: C:\\";
+            tsslCurrentFolder.Size = new Size(103, 17);
+            tsslCurrentFolder.Text = "Current Folder: {0}";
             // 
-            // folderBrowserDialog1
+            // tsslSelectedFiles
+            // 
+            tsslSelectedFiles.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            tsslSelectedFiles.Name = "tsslSelectedFiles";
+            tsslSelectedFiles.Size = new Size(97, 17);
+            tsslSelectedFiles.Text = "Selected Files: {0}";
+            // 
+            // tsslResults
+            // 
+            tsslResults.Name = "tsslResults";
+            tsslResults.Size = new Size(64, 17);
+            tsslResults.Text = "Results: {0}";
+            // 
+            // fbMain
             // 
             fbMain.RootFolder = Environment.SpecialFolder.History;
             // 
-            // columnHeader3
+            // tsslScanned
             // 
-            chFile.Text = "File";
-            chFile.Width = 300;
-            // 
-            // columnHeader4
-            // 
-            chMatchingText.Text = "Matching Text";
-            chMatchingText.Width = 200;
+            tsslScanned.Name = "tsslScanned";
+            tsslScanned.Size = new Size(72, 17);
+            tsslScanned.Text = "Scanned: {0}";
             // 
             // Main
             // 
@@ -349,7 +369,7 @@
         private ToolStripStatusLabel tsslCurrentFolder;
         private ToolStripStatusLabel tsslStatus;
         private TableLayoutPanel tlpSearch;
-        private Button btnSearch;
+        private Button btnSearchOrCancel;
         private ToolStripMenuItem miView;
         private ToolStripMenuItem miToggleExtensions;
         private ToolStripStatusLabel tsslSelectedFiles;
@@ -359,6 +379,9 @@
         private TableLayoutPanel tlpExtensions;
         private TextBox tbExtensionSearch;
         private ColumnHeader chFile;
-        private ColumnHeader chMatchingText;
+        private ColumnHeader chMatches;
+        private ToolStripStatusLabel tsslResults;
+        private ToolStripProgressBar tspbMain;
+        private ToolStripStatusLabel tsslScanned;
     }
 }

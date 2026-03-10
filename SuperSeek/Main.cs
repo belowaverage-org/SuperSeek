@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.RegularExpressions;
 
 namespace SuperSeek
@@ -6,7 +7,35 @@ namespace SuperSeek
     {
         private Dictionary<string, List<string>> ExtensionsAndFiles = new();
         private List<string> SelectedFiles = new();
+        private List<(string, int)> Matches = new();
+        private uint Scanned = 0;
         private string CurrentFolder = "C:\\";
+        private Dictionary<Component, string> LabelCache = new();
+        private CancellationTokenSource CTS = new();
+        private System.Windows.Forms.Timer LabelTimer = new();
+        private bool _Running = false;
+        private bool Running {
+            get
+            {
+                return _Running;
+            }
+            set 
+            {
+                _Running = value;
+                if (_Running)
+                {
+                    Cursor = Cursors.WaitCursor;
+                    btnSearchOrCancel.Text = "Cancel";
+                }
+                else
+                {
+                    Cursor = Cursors.Default;
+                    btnSearchOrCancel.Text = "Search";
+                    SetLabel(tsslStatus, "Idle.");
+                }
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
+            }
+        }
         private EnumerationOptions EnumerationOptions = new()
         {
             RecurseSubdirectories = false,
@@ -16,45 +45,89 @@ namespace SuperSeek
         public Main()
         {
             InitializeComponent();
+            LabelTimer.Interval = 100;
+            LabelTimer.Tick += LabelTimer_Tick;
+            LabelTimer.Enabled = true;
+        }
+
+        private async void LabelTimer_Tick(object? sender, EventArgs e)
+        {
+            SetLabel(tsslResults, Matches.Count.ToString());
+            SetLabel(tsslScanned, Scanned.ToString());
+            if (Running)
+            {
+                tspbMain.Maximum = SelectedFiles.Count;
+                tspbMain.Value = (int)Scanned;
+            }
+        }
+
+        private void Initialize(object sender, EventArgs e)
+        {
+            LabelTimer.Start();
+            miToggleExtensions.Checked = !scMain.Panel1Collapsed;
+            Task.Run(() =>
+            {
+                Invoke(miOpenFolder.PerformClick);
+            });
+        }
+
+        private void SetLabel(Component Label, params string[] Strings)
+        {
+            var textProperty = Label.GetType().GetProperties().First((pi) => { return pi.Name == "Text"; });
+            if (textProperty == null) return;
+            if (!LabelCache.ContainsKey(Label))
+            {
+                LabelCache.Add(Label, (string)textProperty.GetValue(Label)!);
+            }
+            var originalText = LabelCache[Label];
+            uint i = 0;
+            foreach(var item in Strings)
+            {
+                textProperty.SetValue(Label, originalText.Replace($"{{{i}}}", item));
+            }
         }
 
         private async void OpenFolder(object sender, EventArgs e)
         {
-            tsslStatus.Text = "Status: Waiting for user...";
+            SetLabel(tsslStatus, "Waiting for folder dialog...");
             fbMain.ShowDialog();
             if (!Directory.Exists(fbMain.SelectedPath))
             {
-                tsslStatus.Text = "Status: Idle";
+                Running = false;
                 return;
             }
             CurrentFolder = fbMain.SelectedPath;
-            tsslCurrentFolder.Text = "Current Folder: " + CurrentFolder;
-            tsslStatus.Text = "Status: Clearing...";
-            Enabled = false;
+            SetLabel(tsslCurrentFolder, CurrentFolder);
+            SetLabel(tsslStatus, "Clearing...");
+            Running = true;
             ExtensionsAndFiles.Clear();
             lvExtensions.Items.Clear();
             SemaphoreSlim ss = new(1);
-            tsslStatus.Text = "Status: Gathering files...";
-            await LoopFilesAsync(new DirectoryInfo(CurrentFolder), async (file) =>
+            SetLabel(tsslStatus, "Gathering files...");
+            await DiscoverFilesAsync(new DirectoryInfo(CurrentFolder), async (file) =>
             {
-                var ext = file.Extension.ToLower();
-                await ss.WaitAsync();
-                var added = ExtensionsAndFiles.TryAdd(ext, new List<string>());
-                ExtensionsAndFiles[ext].Add(file.FullName);
+                try
+                {
+                    var ext = file.Extension.ToLower();
+                    await ss.WaitAsync(CTS.Token);
+                    var added = ExtensionsAndFiles.TryAdd(ext, new List<string>());
+                    ExtensionsAndFiles[ext].Add(file.FullName);
+                }
+                catch
+                {
+                    //Cancelled
+                }
                 ss.Release();
             });
-            tsslStatus.Text = "Status: Rendering extension list...";
+            SetLabel(tsslStatus, "Rendering extension list...");
             lvExtensions.BeginUpdate();
             foreach (var item in ExtensionsAndFiles)
             {
-                ListViewItem lvi = new([item.Key, item.Value.Count.ToString()]);
-                lvExtensions.Items.Add(lvi);
+                lvExtensions.Items.Add(new ListViewItem([item.Key, item.Value.Count.ToString()]));
             }
+            lvExtensions.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
             lvExtensions.EndUpdate();
-            tsslStatus.Text = "Status: GC Collect...";
-            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
-            tsslStatus.Text = "Status: Idle";
-            Enabled = true;
+            Running = false;
         }
 
         private void Exit(object sender, EventArgs e)
@@ -68,29 +141,22 @@ namespace SuperSeek
             miToggleExtensions.Checked = !scMain.Panel1Collapsed;
         }
 
-        private void Initialize(object sender, EventArgs e)
+        private async Task DiscoverFilesAsync(DirectoryInfo DirectoryInfo, Func<FileInfo, Task>? Action = null)
         {
-            miToggleExtensions.Checked = !scMain.Panel1Collapsed;
-            tsslCurrentFolder.Text = "Current Folder: " + CurrentFolder;
-            Task.Run(() =>
-            {
-                Invoke(miOpenFolder.PerformClick);
-            });
-        }
-
-        private async Task LoopFilesAsync(DirectoryInfo DirectoryInfo, Func<FileInfo, Task>? Action = null)
-        {
+            if (CTS.IsCancellationRequested) return;
             await Task.Run(async () =>
             {
                 List<Task> Tasks = new();
                 var dirs = DirectoryInfo.GetDirectories("*", EnumerationOptions);
                 foreach (DirectoryInfo dir in dirs)
                 {
-                    Tasks.Add(LoopFilesAsync(dir, Action));
+                    if (CTS.IsCancellationRequested) break;
+                    Tasks.Add(DiscoverFilesAsync(dir, Action));
                 }
                 var files = DirectoryInfo.GetFiles("*", EnumerationOptions);
                 foreach (FileInfo file in files)
                 {
+                    if (CTS.IsCancellationRequested) break;
                     if (Action != null) Tasks.Add(Action(file));
                 }
                 await Task.WhenAll(Tasks);
@@ -99,13 +165,13 @@ namespace SuperSeek
 
         private void lvExtensions_ItemChecked(object sender, ItemCheckedEventArgs e)
         {
-            if (!Enabled) return;
+            if (Running) return;
             SelectedFiles.Clear();
             foreach (ListViewItem lvi in lvExtensions.CheckedItems)
             {
                 SelectedFiles.AddRange(ExtensionsAndFiles[lvi.Text]);
             }
-            tsslSelectedFiles.Text = "Selected Files: " + SelectedFiles.Count;
+            SetLabel(tsslSelectedFiles, SelectedFiles.Count.ToString());
         }
 
         private void FilterExtensions(object sender, EventArgs e)
@@ -127,39 +193,55 @@ namespace SuperSeek
             }
         }
 
-        private async void Search(object sender, EventArgs e)
+        private async void Cancel()
         {
-            Enabled = false;
-            lvResults.BeginUpdate();
-            lvResults.Items.Clear();
-            Regex regex = new(tbMainSearch.Text, RegexOptions.IgnoreCase);
-            var matches = await SearchFilesAsync(SelectedFiles, regex);
-            foreach (var match in matches)
-            {
-                foreach (Match rmatch in match.Value)
-                {
-                    lvResults.Items.Add(new ListViewItem([match.Key, rmatch.Value]));
-                }
-            }
-            lvResults.EndUpdate();
-            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
-            Enabled = true;
+            SetLabel(tsslStatus, "Cancelling...");
+            await CTS.CancelAsync();
+            CTS = new();
         }
 
-        private async Task<Dictionary<string, MatchCollection>> SearchFilesAsync(List<string> Files, Regex Regex)
+        private async void SearchOrCancel(object sender, EventArgs e)
         {
+            if (Running)
+            {
+                Cancel();
+            }
+            else
+            {
+                Running = true;
+                lvResults.BeginUpdate();
+                lvResults.Items.Clear();
+                Regex regex = new(tbMainSearch.Text, RegexOptions.IgnoreCase);
+                await ScanFilesAsync(SelectedFiles, regex);
+                foreach (var match in Matches)
+                {
+                    lvResults.Items.Add(new ListViewItem([match.Item1, match.Item2.ToString()]));
+                }
+                lvResults.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+                lvResults.EndUpdate();
+                
+                Running = false;
+            }
+        }
+
+        private async Task ScanFilesAsync(List<string> Files, Regex Regex)
+        {
+            Scanned = 0;
+            Matches.Clear();
             List<Task> Tasks = new();
-            SemaphoreSlim ss = new(1);
-            Dictionary<string, MatchCollection> Matches = new();
             foreach (var file in Files)
             {
+                if (CTS.IsCancellationRequested) break;
                 Tasks.Add(Task.Run(async () =>
                 {
                     try
                     {
-                        var content = await File.ReadAllTextAsync(file);
-                        var rmatches = Regex.Matches(content);
-                        if (rmatches != null && rmatches.Count != 0) Matches.Add(file, rmatches);
+                        if (CTS.IsCancellationRequested) return;
+                        var content = await File.ReadAllTextAsync(file, CTS.Token);
+                        if (CTS.IsCancellationRequested) return;
+                        var rmatches = Regex.Count(content);
+                        if (rmatches > 0) Matches.Add((file, rmatches));
+                        Scanned++;
                     }
                     catch
                     {
@@ -168,7 +250,6 @@ namespace SuperSeek
                 }));
             }
             await Task.WhenAll(Tasks);
-            return Matches;
         }
     }
 }
