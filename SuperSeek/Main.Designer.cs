@@ -60,8 +60,11 @@
             tsbRefreshExts = new ToolStripButton();
             tsbSearchPath = new ToolStripButton();
             tsMain = new ToolStrip();
-            tsbAllExtensions = new ToolStripButton();
+            tssMain1 = new ToolStripSeparator();
             tsbSearchContent = new ToolStripButton();
+            tssMain2 = new ToolStripSeparator();
+            tsbReveal = new ToolStripButton();
+            tsbOpenWith = new ToolStripButton();
             msMain.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)scMain).BeginInit();
             scMain.Panel1.SuspendLayout();
@@ -131,7 +134,7 @@
             // scMain
             // 
             scMain.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            scMain.Location = new Point(5, 55);
+            scMain.Location = new Point(5, 70);
             scMain.Margin = new Padding(0);
             scMain.Name = "scMain";
             // 
@@ -143,7 +146,7 @@
             // scMain.Panel2
             // 
             scMain.Panel2.Controls.Add(tlpResults);
-            scMain.Size = new Size(773, 380);
+            scMain.Size = new Size(774, 364);
             scMain.SplitterDistance = 224;
             scMain.SplitterWidth = 5;
             scMain.TabIndex = 2;
@@ -161,7 +164,7 @@
             tlpExtensions.RowCount = 2;
             tlpExtensions.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
             tlpExtensions.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tlpExtensions.Size = new Size(224, 379);
+            tlpExtensions.Size = new Size(224, 363);
             tlpExtensions.TabIndex = 2;
             // 
             // tbExtensionSearch
@@ -186,11 +189,12 @@
             lvExtensions.Location = new Point(0, 34);
             lvExtensions.Margin = new Padding(0, 4, 0, 0);
             lvExtensions.Name = "lvExtensions";
-            lvExtensions.Size = new Size(224, 345);
+            lvExtensions.Size = new Size(224, 329);
             lvExtensions.Sorting = SortOrder.Ascending;
             lvExtensions.TabIndex = 1;
             lvExtensions.UseCompatibleStateImageBehavior = false;
             lvExtensions.View = View.Details;
+            lvExtensions.ColumnClick += SortColumn;
             lvExtensions.ItemChecked += lvExtensions_ItemChecked;
             // 
             // chExtension
@@ -216,7 +220,7 @@
             tlpResults.RowCount = 2;
             tlpResults.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
             tlpResults.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tlpResults.Size = new Size(544, 380);
+            tlpResults.Size = new Size(545, 364);
             tlpResults.TabIndex = 1;
             // 
             // lvResults
@@ -227,11 +231,14 @@
             lvResults.Location = new Point(0, 35);
             lvResults.Margin = new Padding(0, 5, 1, 0);
             lvResults.Name = "lvResults";
-            lvResults.Size = new Size(543, 345);
+            lvResults.Size = new Size(544, 329);
             lvResults.TabIndex = 0;
             lvResults.UseCompatibleStateImageBehavior = false;
             lvResults.View = View.Details;
-            lvResults.MouseDoubleClick += lvResults_MouseDoubleClick;
+            lvResults.ColumnClick += SortColumn;
+            lvResults.ItemSelectionChanged += lvResults_ItemSelectionChanged;
+            lvResults.KeyDown += lvResults_KeyDown;
+            lvResults.MouseDoubleClick += OpenSelectedFiles;
             // 
             // chFile
             // 
@@ -256,7 +263,7 @@
             tlpSearch.Name = "tlpSearch";
             tlpSearch.RowCount = 1;
             tlpSearch.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tlpSearch.Size = new Size(544, 30);
+            tlpSearch.Size = new Size(545, 30);
             tlpSearch.TabIndex = 1;
             // 
             // tbMainSearch
@@ -267,7 +274,7 @@
             tbMainSearch.Multiline = true;
             tbMainSearch.Name = "tbMainSearch";
             tbMainSearch.PlaceholderText = "Regular Expressions";
-            tbMainSearch.Size = new Size(464, 28);
+            tbMainSearch.Size = new Size(465, 28);
             tbMainSearch.TabIndex = 1;
             tbMainSearch.KeyDown += tbMainSearch_KeyDown;
             // 
@@ -275,7 +282,7 @@
             // 
             btnSearchOrCancel.Dock = DockStyle.Fill;
             btnSearchOrCancel.FlatStyle = FlatStyle.System;
-            btnSearchOrCancel.Location = new Point(468, 0);
+            btnSearchOrCancel.Location = new Point(469, 0);
             btnSearchOrCancel.Margin = new Padding(4, 0, 0, 0);
             btnSearchOrCancel.Name = "btnSearchOrCancel";
             btnSearchOrCancel.Size = new Size(76, 30);
@@ -348,8 +355,9 @@
             tsbOpenFolder.ImageTransparentColor = Color.Magenta;
             tsbOpenFolder.Margin = new Padding(0, 1, 5, 2);
             tsbOpenFolder.Name = "tsbOpenFolder";
-            tsbOpenFolder.Size = new Size(92, 20);
-            tsbOpenFolder.Text = "Open Folder";
+            tsbOpenFolder.Size = new Size(85, 35);
+            tsbOpenFolder.Text = "Open Folder...";
+            tsbOpenFolder.TextImageRelation = TextImageRelation.ImageAboveText;
             tsbOpenFolder.Click += OpenFolder;
             // 
             // tsbRefreshExts
@@ -358,8 +366,9 @@
             tsbRefreshExts.ImageTransparentColor = Color.Magenta;
             tsbRefreshExts.Margin = new Padding(0, 1, 5, 2);
             tsbRefreshExts.Name = "tsbRefreshExts";
-            tsbRefreshExts.Size = new Size(102, 20);
+            tsbRefreshExts.Size = new Size(86, 35);
             tsbRefreshExts.Text = "Refresh Folder";
+            tsbRefreshExts.TextImageRelation = TextImageRelation.ImageAboveText;
             tsbRefreshExts.ToolTipText = "Refresh the selected directory.";
             tsbRefreshExts.Click += RefreshFolder;
             // 
@@ -372,32 +381,27 @@
             tsbSearchPath.ImageTransparentColor = Color.Magenta;
             tsbSearchPath.Margin = new Padding(0, 1, 5, 2);
             tsbSearchPath.Name = "tsbSearchPath";
-            tsbSearchPath.Size = new Size(89, 20);
+            tsbSearchPath.Size = new Size(73, 35);
             tsbSearchPath.Text = "Search Path";
+            tsbSearchPath.TextImageRelation = TextImageRelation.ImageAboveText;
             tsbSearchPath.ToolTipText = "Search using the file path.";
             // 
             // tsMain
             // 
             tsMain.GripStyle = ToolStripGripStyle.Hidden;
-            tsMain.Items.AddRange(new ToolStripItem[] { tsbOpenFolder, tsbRefreshExts, tsbAllExtensions, tsbSearchPath, tsbSearchContent });
+            tsMain.Items.AddRange(new ToolStripItem[] { tsbOpenFolder, tsbRefreshExts, tssMain1, tsbSearchPath, tsbSearchContent, tssMain2, tsbReveal, tsbOpenWith });
             tsMain.Location = new Point(0, 24);
             tsMain.Name = "tsMain";
             tsMain.Padding = new Padding(5, 5, 5, 0);
-            tsMain.Size = new Size(784, 28);
+            tsMain.Size = new Size(784, 43);
             tsMain.TabIndex = 4;
             tsMain.Text = "tsMain";
             // 
-            // tsbAllExtensions
+            // tssMain1
             // 
-            tsbAllExtensions.CheckOnClick = true;
-            tsbAllExtensions.Image = Properties.Resources.check_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
-            tsbAllExtensions.ImageTransparentColor = Color.Magenta;
-            tsbAllExtensions.Margin = new Padding(0, 1, 5, 2);
-            tsbAllExtensions.Name = "tsbAllExtensions";
-            tsbAllExtensions.Size = new Size(100, 20);
-            tsbAllExtensions.Text = "All Extensions";
-            tsbAllExtensions.ToolTipText = "Toggle all extensions.";
-            tsbAllExtensions.CheckedChanged += tsbAllExts_CheckedChanged;
+            tssMain1.Margin = new Padding(0, 0, 5, 0);
+            tssMain1.Name = "tssMain1";
+            tssMain1.Size = new Size(6, 38);
             // 
             // tsbSearchContent
             // 
@@ -408,9 +412,40 @@
             tsbSearchContent.ImageTransparentColor = Color.Magenta;
             tsbSearchContent.Margin = new Padding(0, 1, 5, 2);
             tsbSearchContent.Name = "tsbSearchContent";
-            tsbSearchContent.Size = new Size(108, 20);
+            tsbSearchContent.Size = new Size(92, 35);
             tsbSearchContent.Text = "Search Content";
+            tsbSearchContent.TextImageRelation = TextImageRelation.ImageAboveText;
             tsbSearchContent.ToolTipText = "Search using the file content.";
+            // 
+            // tssMain2
+            // 
+            tssMain2.Margin = new Padding(0, 0, 5, 0);
+            tssMain2.Name = "tssMain2";
+            tssMain2.Size = new Size(6, 38);
+            // 
+            // tsbReveal
+            // 
+            tsbReveal.Enabled = false;
+            tsbReveal.Image = Properties.Resources.folder_eye_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
+            tsbReveal.ImageTransparentColor = Color.Magenta;
+            tsbReveal.Margin = new Padding(0, 1, 5, 2);
+            tsbReveal.Name = "tsbReveal";
+            tsbReveal.Size = new Size(76, 35);
+            tsbReveal.Text = "Show Folder";
+            tsbReveal.TextImageRelation = TextImageRelation.ImageAboveText;
+            tsbReveal.Click += OpenSelectedFiles;
+            // 
+            // tsbOpenWith
+            // 
+            tsbOpenWith.Enabled = false;
+            tsbOpenWith.Image = Properties.Resources.open_in_browser_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
+            tsbOpenWith.ImageTransparentColor = Color.Magenta;
+            tsbOpenWith.Margin = new Padding(0, 1, 5, 2);
+            tsbOpenWith.Name = "tsbOpenWith";
+            tsbOpenWith.Size = new Size(77, 35);
+            tsbOpenWith.Text = "Open With...";
+            tsbOpenWith.TextImageRelation = TextImageRelation.ImageAboveText;
+            tsbOpenWith.Click += OpenSelectedFiles;
             // 
             // Main
             // 
@@ -479,6 +514,9 @@
         private ToolStripButton tsbSearchPath;
         private ToolStrip tsMain;
         private ToolStripButton tsbSearchContent;
-        private ToolStripButton tsbAllExtensions;
+        private ToolStripSeparator tssMain2;
+        private ToolStripButton tsbOpenWith;
+        private ToolStripSeparator tssMain1;
+        private ToolStripButton tsbReveal;
     }
 }

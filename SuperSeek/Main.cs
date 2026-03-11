@@ -1,21 +1,29 @@
 using System.ComponentModel;
-using System.Diagnostics;
-using System.Reflection.Metadata;
+using Windows.Win32;
+using System.Security.Principal;
 using System.Text.RegularExpressions;
+using System.Diagnostics;
+using Windows.Win32.Foundation;
+using Windows.Win32.UI.WindowsAndMessaging;
+using System.Collections;
 
 namespace SuperSeek
 {
     public partial class Main : Form
     {
         private Dictionary<string, List<string>> ExtensionsAndFiles = new();
+        private SemaphoreSlim ExtensionsAndFilesSemaphore = new(1);
         private List<string> SelectedFiles = new();
         private List<(string, int)> Results = new();
+        private SemaphoreSlim ResultsSemaphore = new(1);
         private uint Scanned = 0;
         private string CurrentFolder = "C:\\";
         private Dictionary<Component, string> LabelCache = new();
         private CancellationTokenSource CTS = new();
         private System.Windows.Forms.Timer LabelTimer = new();
         private bool _Running = false;
+        private bool IsElevated = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+
         private bool Running
         {
             get
@@ -30,28 +38,24 @@ namespace SuperSeek
                     Cursor = Cursors.AppStarting;
                     btnSearchOrCancel.Text = "Cancel";
                     SetLabel(tsslStatus, "Working...");
-                    msMain.Enabled =
-                    tsMain.Enabled =
-                    lvResults.Enabled =
-                    tbMainSearch.Enabled =
-                    scMain.Panel1.Enabled =
-                    false;
+
                 }
                 else
                 {
                     Cursor = Cursors.Default;
                     btnSearchOrCancel.Text = "Search";
                     SetLabel(tsslStatus, "Idle.");
-                    msMain.Enabled =
-                    tsMain.Enabled =
-                    lvResults.Enabled =
-                    tbMainSearch.Enabled =
-                    scMain.Panel1.Enabled =
-                    true;
                 }
+                msMain.Enabled =
+                tsMain.Enabled =
+                lvResults.Enabled =
+                tbMainSearch.Enabled =
+                scMain.Panel1.Enabled =
+                !_Running;
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
             }
         }
+
         private EnumerationOptions EnumerationOptions = new()
         {
             RecurseSubdirectories = false,
@@ -150,14 +154,13 @@ namespace SuperSeek
             Running = true;
             SetLabel(tsslStatus, "Clearing...");
             ClearExtensions();
-            SemaphoreSlim ss = new(1);
             SetLabel(tsslStatus, "Gathering files...");
             await DiscoverFilesAsync(new DirectoryInfo(CurrentFolder), async (file) =>
             {
                 try
                 {
                     var ext = file.Extension.ToLower();
-                    await ss.WaitAsync(CTS.Token);
+                    await ExtensionsAndFilesSemaphore.WaitAsync(CTS.Token);
                     var added = ExtensionsAndFiles.TryAdd(ext, new List<string>());
                     ExtensionsAndFiles[ext].Add(file.FullName);
                 }
@@ -165,15 +168,13 @@ namespace SuperSeek
                 {
                     //Cancelled
                 }
-                ss.Release();
+                ExtensionsAndFilesSemaphore.Release();
             });
             SetLabel(tsslStatus, "Rendering extension list...");
             lvExtensions.BeginUpdate();
             foreach (var item in ExtensionsAndFiles)
             {
-                ListViewItem lvi = new([item.Key, item.Value.Count.ToString()]);
-                //lvi.Checked = tsbAllExtensions.Checked;
-                lvExtensions.Items.Add(lvi);
+                lvExtensions.Items.Add(new ListViewItem([item.Key, item.Value.Count.ToString()]));
             }
             lvExtensions.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
             lvExtensions.EndUpdate();
@@ -289,18 +290,29 @@ namespace SuperSeek
                     try
                     {
                         if (CTS.IsCancellationRequested) return;
-                        if (Regex.ToString() == String.Empty)
+                        if (Regex.ToString() == string.Empty)
                         {
+                            await ResultsSemaphore.WaitAsync(CTS.Token);
                             Results.Add((file, 0));
+                            ResultsSemaphore.Release();
                             return;
                         }
                         if (CTS.IsCancellationRequested) return;
-                        var content = await File.ReadAllTextAsync(file, CTS.Token);
+                        var rmatches = 0;
+                        var content = string.Empty;
+                        if (tsbSearchContent.Checked)
+                        {
+                            content = await File.ReadAllTextAsync(file, CTS.Token);
+                            if (CTS.IsCancellationRequested) return;
+                            rmatches += Regex.Count(content);
+                            if (CTS.IsCancellationRequested) return;
+                        }
+                        if (tsbSearchPath.Checked) rmatches += Regex.Count(file);
                         if (CTS.IsCancellationRequested) return;
-                        var rmatches = Regex.Count(file);
-                        rmatches += Regex.Count(content);
+                        await ResultsSemaphore.WaitAsync(CTS.Token);
                         if (rmatches > 0) Results.Add((file, rmatches));
                         Scanned++;
+                        ResultsSemaphore.Release();
                     }
                     catch
                     {
@@ -330,38 +342,102 @@ namespace SuperSeek
             }
         }
 
-        private void lvResults_MouseDoubleClick(object sender, MouseEventArgs e)
+        private void OpenSelectedFiles(object? sender = null, EventArgs? e = null)
         {
             if (lvResults.SelectedItems.Count > 0)
             {
                 foreach (ListViewItem item in lvResults.SelectedItems)
                 {
-                    OpenFile(item.Text);
+                    OpenFile(item.Text, sender == tsbOpenWith, sender == tsbReveal);
                 }
             }
         }
 
-        private void OpenFile(string File)
+        private void OpenFile(string File, bool OpenWith = false, bool Reveal = false)
         {
-            ProcessStartInfo info = new()
+            if (Reveal)
             {
-                UseShellExecute = true,
-                FileName = "explorer.exe",
-                Arguments = File
-            };
-            Process.Start(info);
+                ProcessStartInfo info = new()
+                {
+                    UseShellExecute = true,
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{File}\""
+                };
+                Process.Start(info);
+                return;
+            }
+            if (OpenWith)
+            {
+                var verb = string.Empty;
+                if (IsElevated) verb = "runas";
+                ProcessStartInfo info = new()
+                {
+                    UseShellExecute = true,
+                    FileName = "OpenWith.exe",
+                    Arguments = $"\"{File}\"",
+                    Verb = verb
+                };
+                Process.Start(info);
+                return;
+            }
+            PInvoke.ShellExecute(HWND.Null, null, File, null, null, SHOW_WINDOW_CMD.SW_NORMAL);
         }
 
-        private void tsbAllExts_CheckedChanged(object sender, EventArgs e)
+        private void lvResults_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
         {
-            /*
-            lvExtensions.BeginUpdate();
-            foreach (ListViewItem item in lvExtensions.Items)
+            tsbOpenWith.Enabled =
+            tsbReveal.Enabled =
+            lvResults.SelectedItems.Count > 0;
+        }
+
+        private void lvResults_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
             {
-                item.Checked = tsbAllExtensions.Checked;
+                e.SuppressKeyPress = true;
+                e.Handled = true;
+                OpenSelectedFiles();
             }
-            lvExtensions.EndUpdate();
-            */
+        }
+
+        private void SortColumn(object sender, ColumnClickEventArgs e)
+        {
+            var lv = (ListView)sender;
+            lv.ListViewItemSorter = new ColumnComparer(e.Column, false);
+            lv.Sort();
+        }
+
+        private class ColumnComparer : IComparer
+        {
+            private int Column;
+            private bool Reverse;
+            public ColumnComparer(int Column, bool Reverse = false)
+            {
+                this.Column = Column;
+                this.Reverse = Reverse;
+            }
+            public int Compare(object? x, object? y)
+            {
+                var result = 0;
+                var lviX = (ListViewItem?)x;
+                var lviY = (ListViewItem?)y;
+                if (Column == 0)
+                {
+                    result = string.Compare(lviX?.Text, lviY?.Text);
+                }
+                else
+                {
+                    result = string.Compare(lviX?.Text, lviY?.Text);
+                }
+                if (Reverse)
+                {
+                    return result * -1;
+                }
+                else
+                {
+                    return result;
+                }
+            }
         }
     }
 }

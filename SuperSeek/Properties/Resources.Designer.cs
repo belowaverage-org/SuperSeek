@@ -93,6 +93,16 @@ namespace SuperSeek.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap folder_eye_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20 {
+            get {
+                object obj = ResourceManager.GetObject("folder_eye_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap folder_open_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20 {
             get {
                 object obj = ResourceManager.GetObject("folder_open_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20", resourceCulture);
@@ -106,6 +116,16 @@ namespace SuperSeek.Properties {
         internal static System.Drawing.Bitmap manage_search_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20 {
             get {
                 object obj = ResourceManager.GetObject("manage_search_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap open_in_browser_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20 {
+            get {
+                object obj = ResourceManager.GetObject("open_in_browser_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
