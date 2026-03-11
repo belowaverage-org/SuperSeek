@@ -56,6 +56,12 @@
             tsslScanned = new ToolStripStatusLabel();
             tsslResults = new ToolStripStatusLabel();
             fbMain = new FolderBrowserDialog();
+            tsbOpenFolder = new ToolStripButton();
+            tsbRefreshExts = new ToolStripButton();
+            tsbSearchPath = new ToolStripButton();
+            tsMain = new ToolStrip();
+            tsbAllExtensions = new ToolStripButton();
+            tsbSearchContent = new ToolStripButton();
             msMain.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)scMain).BeginInit();
             scMain.Panel1.SuspendLayout();
@@ -65,6 +71,7 @@
             tlpResults.SuspendLayout();
             tlpSearch.SuspendLayout();
             ssMain.SuspendLayout();
+            tsMain.SuspendLayout();
             SuspendLayout();
             // 
             // msMain
@@ -86,20 +93,22 @@
             // 
             // miOpenFolder
             // 
+            miOpenFolder.Image = Properties.Resources.folder_open_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
             miOpenFolder.Name = "miOpenFolder";
-            miOpenFolder.Size = new Size(180, 22);
+            miOpenFolder.Size = new Size(148, 22);
             miOpenFolder.Text = "&Open Folder...";
             miOpenFolder.Click += OpenFolder;
             // 
             // tssFile1
             // 
             tssFile1.Name = "tssFile1";
-            tssFile1.Size = new Size(177, 6);
+            tssFile1.Size = new Size(145, 6);
             // 
             // miExit
             // 
+            miExit.Image = Properties.Resources.close_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
             miExit.Name = "miExit";
-            miExit.Size = new Size(180, 22);
+            miExit.Size = new Size(148, 22);
             miExit.Text = "&Exit";
             miExit.Click += miExit_Click;
             // 
@@ -122,7 +131,7 @@
             // scMain
             // 
             scMain.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            scMain.Location = new Point(5, 30);
+            scMain.Location = new Point(5, 55);
             scMain.Margin = new Padding(0);
             scMain.Name = "scMain";
             // 
@@ -134,7 +143,7 @@
             // scMain.Panel2
             // 
             scMain.Panel2.Controls.Add(tlpResults);
-            scMain.Size = new Size(773, 403);
+            scMain.Size = new Size(773, 380);
             scMain.SplitterDistance = 224;
             scMain.SplitterWidth = 5;
             scMain.TabIndex = 2;
@@ -152,7 +161,7 @@
             tlpExtensions.RowCount = 2;
             tlpExtensions.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
             tlpExtensions.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tlpExtensions.Size = new Size(224, 402);
+            tlpExtensions.Size = new Size(224, 379);
             tlpExtensions.TabIndex = 2;
             // 
             // tbExtensionSearch
@@ -177,7 +186,7 @@
             lvExtensions.Location = new Point(0, 34);
             lvExtensions.Margin = new Padding(0, 4, 0, 0);
             lvExtensions.Name = "lvExtensions";
-            lvExtensions.Size = new Size(224, 368);
+            lvExtensions.Size = new Size(224, 345);
             lvExtensions.Sorting = SortOrder.Ascending;
             lvExtensions.TabIndex = 1;
             lvExtensions.UseCompatibleStateImageBehavior = false;
@@ -207,7 +216,7 @@
             tlpResults.RowCount = 2;
             tlpResults.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
             tlpResults.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tlpResults.Size = new Size(544, 403);
+            tlpResults.Size = new Size(544, 380);
             tlpResults.TabIndex = 1;
             // 
             // lvResults
@@ -218,10 +227,11 @@
             lvResults.Location = new Point(0, 35);
             lvResults.Margin = new Padding(0, 5, 1, 0);
             lvResults.Name = "lvResults";
-            lvResults.Size = new Size(543, 368);
+            lvResults.Size = new Size(543, 345);
             lvResults.TabIndex = 0;
             lvResults.UseCompatibleStateImageBehavior = false;
             lvResults.View = View.Details;
+            lvResults.MouseDoubleClick += lvResults_MouseDoubleClick;
             // 
             // chFile
             // 
@@ -281,25 +291,31 @@
             ssMain.Name = "ssMain";
             ssMain.RenderMode = ToolStripRenderMode.Professional;
             ssMain.Size = new Size(784, 22);
+            ssMain.SizingGrip = false;
             ssMain.TabIndex = 3;
             ssMain.Text = "ssMain";
             // 
             // tspbMain
             // 
             tspbMain.Name = "tspbMain";
-            tspbMain.Size = new Size(100, 16);
+            tspbMain.Padding = new Padding(6, 0, 0, 0);
+            tspbMain.Size = new Size(106, 16);
             // 
             // tsslStatus
             // 
             tsslStatus.DisplayStyle = ToolStripItemDisplayStyle.Text;
             tsslStatus.Name = "tsslStatus";
-            tsslStatus.Size = new Size(59, 17);
+            tsslStatus.Size = new Size(325, 17);
+            tsslStatus.Spring = true;
             tsslStatus.Text = "Status: {0}";
+            tsslStatus.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // tsslCurrentFolder
             // 
             tsslCurrentFolder.DisplayStyle = ToolStripItemDisplayStyle.Text;
             tsslCurrentFolder.Name = "tsslCurrentFolder";
+            tsslCurrentFolder.Overflow = ToolStripItemOverflow.Never;
+            tsslCurrentFolder.RightToLeft = RightToLeft.No;
             tsslCurrentFolder.Size = new Size(103, 17);
             tsslCurrentFolder.Text = "Current Folder: {0}";
             // 
@@ -326,17 +342,88 @@
             // 
             fbMain.RootFolder = Environment.SpecialFolder.History;
             // 
+            // tsbOpenFolder
+            // 
+            tsbOpenFolder.Image = Properties.Resources.folder_open_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
+            tsbOpenFolder.ImageTransparentColor = Color.Magenta;
+            tsbOpenFolder.Margin = new Padding(0, 1, 5, 2);
+            tsbOpenFolder.Name = "tsbOpenFolder";
+            tsbOpenFolder.Size = new Size(92, 20);
+            tsbOpenFolder.Text = "Open Folder";
+            tsbOpenFolder.Click += OpenFolder;
+            // 
+            // tsbRefreshExts
+            // 
+            tsbRefreshExts.Image = Properties.Resources.refresh_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
+            tsbRefreshExts.ImageTransparentColor = Color.Magenta;
+            tsbRefreshExts.Margin = new Padding(0, 1, 5, 2);
+            tsbRefreshExts.Name = "tsbRefreshExts";
+            tsbRefreshExts.Size = new Size(102, 20);
+            tsbRefreshExts.Text = "Refresh Folder";
+            tsbRefreshExts.ToolTipText = "Refresh the selected directory.";
+            tsbRefreshExts.Click += RefreshFolder;
+            // 
+            // tsbSearchPath
+            // 
+            tsbSearchPath.Checked = true;
+            tsbSearchPath.CheckOnClick = true;
+            tsbSearchPath.CheckState = CheckState.Checked;
+            tsbSearchPath.Image = Properties.Resources.manage_search_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
+            tsbSearchPath.ImageTransparentColor = Color.Magenta;
+            tsbSearchPath.Margin = new Padding(0, 1, 5, 2);
+            tsbSearchPath.Name = "tsbSearchPath";
+            tsbSearchPath.Size = new Size(89, 20);
+            tsbSearchPath.Text = "Search Path";
+            tsbSearchPath.ToolTipText = "Search using the file path.";
+            // 
+            // tsMain
+            // 
+            tsMain.GripStyle = ToolStripGripStyle.Hidden;
+            tsMain.Items.AddRange(new ToolStripItem[] { tsbOpenFolder, tsbRefreshExts, tsbAllExtensions, tsbSearchPath, tsbSearchContent });
+            tsMain.Location = new Point(0, 24);
+            tsMain.Name = "tsMain";
+            tsMain.Padding = new Padding(5, 5, 5, 0);
+            tsMain.Size = new Size(784, 28);
+            tsMain.TabIndex = 4;
+            tsMain.Text = "tsMain";
+            // 
+            // tsbAllExtensions
+            // 
+            tsbAllExtensions.CheckOnClick = true;
+            tsbAllExtensions.Image = Properties.Resources.check_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
+            tsbAllExtensions.ImageTransparentColor = Color.Magenta;
+            tsbAllExtensions.Margin = new Padding(0, 1, 5, 2);
+            tsbAllExtensions.Name = "tsbAllExtensions";
+            tsbAllExtensions.Size = new Size(100, 20);
+            tsbAllExtensions.Text = "All Extensions";
+            tsbAllExtensions.ToolTipText = "Toggle all extensions.";
+            tsbAllExtensions.CheckedChanged += tsbAllExts_CheckedChanged;
+            // 
+            // tsbSearchContent
+            // 
+            tsbSearchContent.Checked = true;
+            tsbSearchContent.CheckOnClick = true;
+            tsbSearchContent.CheckState = CheckState.Checked;
+            tsbSearchContent.Image = Properties.Resources.document_search_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
+            tsbSearchContent.ImageTransparentColor = Color.Magenta;
+            tsbSearchContent.Margin = new Padding(0, 1, 5, 2);
+            tsbSearchContent.Name = "tsbSearchContent";
+            tsbSearchContent.Size = new Size(108, 20);
+            tsbSearchContent.Text = "Search Content";
+            tsbSearchContent.ToolTipText = "Search using the file content.";
+            // 
             // Main
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(784, 461);
+            Controls.Add(tsMain);
             Controls.Add(ssMain);
             Controls.Add(scMain);
             Controls.Add(msMain);
             MainMenuStrip = msMain;
             Name = "Main";
-            Text = "SuperSeek";
+            Text = "Super Seek: High Performance File Search Tool";
             FormClosing += Main_FormClosing;
             Load += Initialize;
             msMain.ResumeLayout(false);
@@ -352,6 +439,8 @@
             tlpSearch.PerformLayout();
             ssMain.ResumeLayout(false);
             ssMain.PerformLayout();
+            tsMain.ResumeLayout(false);
+            tsMain.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -385,5 +474,11 @@
         private ToolStripStatusLabel tsslResults;
         private ToolStripProgressBar tspbMain;
         private ToolStripStatusLabel tsslScanned;
+        private ToolStripButton tsbOpenFolder;
+        private ToolStripButton tsbRefreshExts;
+        private ToolStripButton tsbSearchPath;
+        private ToolStrip tsMain;
+        private ToolStripButton tsbSearchContent;
+        private ToolStripButton tsbAllExtensions;
     }
 }

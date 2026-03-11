@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Reflection.Metadata;
 using System.Text.RegularExpressions;
 
 namespace SuperSeek
@@ -25,14 +27,27 @@ namespace SuperSeek
                 _Running = value;
                 if (_Running)
                 {
-                    Cursor = Cursors.WaitCursor;
+                    Cursor = Cursors.AppStarting;
                     btnSearchOrCancel.Text = "Cancel";
+                    SetLabel(tsslStatus, "Working...");
+                    msMain.Enabled =
+                    tsMain.Enabled =
+                    lvResults.Enabled =
+                    tbMainSearch.Enabled =
+                    scMain.Panel1.Enabled =
+                    false;
                 }
                 else
                 {
                     Cursor = Cursors.Default;
                     btnSearchOrCancel.Text = "Search";
                     SetLabel(tsslStatus, "Idle.");
+                    msMain.Enabled =
+                    tsMain.Enabled =
+                    lvResults.Enabled =
+                    tbMainSearch.Enabled =
+                    scMain.Panel1.Enabled =
+                    true;
                 }
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
             }
@@ -127,6 +142,11 @@ namespace SuperSeek
             }
             CurrentFolder = fbMain.SelectedPath;
             SetLabel(tsslCurrentFolder, CurrentFolder);
+            RefreshFolder();
+        }
+
+        private async void RefreshFolder(object? sender = null, EventArgs? e = null)
+        {
             Running = true;
             SetLabel(tsslStatus, "Clearing...");
             ClearExtensions();
@@ -151,7 +171,9 @@ namespace SuperSeek
             lvExtensions.BeginUpdate();
             foreach (var item in ExtensionsAndFiles)
             {
-                lvExtensions.Items.Add(new ListViewItem([item.Key, item.Value.Count.ToString()]));
+                ListViewItem lvi = new([item.Key, item.Value.Count.ToString()]);
+                //lvi.Checked = tsbAllExtensions.Checked;
+                lvExtensions.Items.Add(lvi);
             }
             lvExtensions.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
             lvExtensions.EndUpdate();
@@ -267,9 +289,16 @@ namespace SuperSeek
                     try
                     {
                         if (CTS.IsCancellationRequested) return;
+                        if (Regex.ToString() == String.Empty)
+                        {
+                            Results.Add((file, 0));
+                            return;
+                        }
+                        if (CTS.IsCancellationRequested) return;
                         var content = await File.ReadAllTextAsync(file, CTS.Token);
                         if (CTS.IsCancellationRequested) return;
-                        var rmatches = Regex.Count(content);
+                        var rmatches = Regex.Count(file);
+                        rmatches += Regex.Count(content);
                         if (rmatches > 0) Results.Add((file, rmatches));
                         Scanned++;
                     }
@@ -299,6 +328,40 @@ namespace SuperSeek
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
+        }
+
+        private void lvResults_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            if (lvResults.SelectedItems.Count > 0)
+            {
+                foreach (ListViewItem item in lvResults.SelectedItems)
+                {
+                    OpenFile(item.Text);
+                }
+            }
+        }
+
+        private void OpenFile(string File)
+        {
+            ProcessStartInfo info = new()
+            {
+                UseShellExecute = true,
+                FileName = "explorer.exe",
+                Arguments = File
+            };
+            Process.Start(info);
+        }
+
+        private void tsbAllExts_CheckedChanged(object sender, EventArgs e)
+        {
+            /*
+            lvExtensions.BeginUpdate();
+            foreach (ListViewItem item in lvExtensions.Items)
+            {
+                item.Checked = tsbAllExtensions.Checked;
+            }
+            lvExtensions.EndUpdate();
+            */
         }
     }
 }
