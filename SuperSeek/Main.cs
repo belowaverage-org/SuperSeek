@@ -21,6 +21,7 @@ namespace SuperSeek
         private Dictionary<Component, string> LabelCache = new();
         private CancellationTokenSource CTS = new();
         private System.Windows.Forms.Timer LabelTimer = new();
+        private System.Threading.Timer Timer = new(TimerTick);
         private bool _Running = false;
         private bool IsElevated = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
 
@@ -68,6 +69,11 @@ namespace SuperSeek
             LabelTimer.Interval = 100;
             LabelTimer.Tick += LabelTimer_Tick;
             LabelTimer.Enabled = true;
+        }
+
+        private void TimerTick(object? State)
+        {
+
         }
 
         private async void LabelTimer_Tick(object? sender, EventArgs e)
@@ -172,10 +178,12 @@ namespace SuperSeek
             });
             SetLabel(tsslStatus, "Rendering extension list...");
             lvExtensions.BeginUpdate();
+            List<ListViewItem> items = new();
             foreach (var item in ExtensionsAndFiles)
             {
-                lvExtensions.Items.Add(new ListViewItem([item.Key, item.Value.Count.ToString()]));
+                items.Add(new([item.Key, item.Value.Count.ToString()]));
             }
+            lvExtensions.Items.AddRange(items.ToArray());
             lvExtensions.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
             lvExtensions.EndUpdate();
             Running = false;
@@ -269,10 +277,12 @@ namespace SuperSeek
                 ClearResults();
                 Regex regex = new(tbMainSearch.Text, RegexOptions.IgnoreCase);
                 await ScanFilesAsync(SelectedFiles, regex);
+                List<ListViewItem> items = new();
                 foreach (var match in Results)
                 {
-                    lvResults.Items.Add(new ListViewItem([match.Item1, match.Item2.ToString()]));
+                    items.Add(new([match.Item1, match.Item2.ToString()]));
                 }
+                lvResults.Items.AddRange(items.ToArray());
                 lvResults.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
                 lvResults.EndUpdate();
                 Running = false;
@@ -403,8 +413,32 @@ namespace SuperSeek
         private void SortColumn(object sender, ColumnClickEventArgs e)
         {
             var lv = (ListView)sender;
-            lv.ListViewItemSorter = new ColumnComparer(e.Column, false);
+            var direction = GetSetSortColumn(lv, e.Column);
+            lv.ListViewItemSorter = new ColumnComparer(e.Column, direction);
             lv.Sort();
+        }
+
+        private bool GetSetSortColumn(ListView ListView, int Column)
+        {
+            var col = ListView.Columns[Column];
+            foreach (ColumnHeader icol in ListView.Columns)
+            {
+                if (icol.Index == Column) continue;
+                icol.Text = icol.Text.Replace("▼ ", string.Empty);
+                icol.Text = icol.Text.Replace("▲ ", string.Empty);
+            }
+            if (col.Text.StartsWith("▼ "))
+            {
+                col.Text = col.Text.Replace('▼', '▲');
+                return true;
+            }
+            if (col.Text.StartsWith("▲ "))
+            {
+                col.Text = col.Text.Replace('▲', '▼');
+                return false;
+            }
+            col.Text = $"▼ {col.Text}";
+            return false;
         }
 
         private class ColumnComparer : IComparer
@@ -421,13 +455,15 @@ namespace SuperSeek
                 var result = 0;
                 var lviX = (ListViewItem?)x;
                 var lviY = (ListViewItem?)y;
-                if (Column == 0)
+                var textX = lviX?.SubItems[Column].Text;
+                var textY = lviY?.SubItems[Column].Text;
+                if (int.TryParse(textX, out var intX) && int.TryParse(textY, out var intY))
                 {
-                    result = string.Compare(lviX?.Text, lviY?.Text);
+                    result = intY - intX;
                 }
                 else
                 {
-                    result = string.Compare(lviX?.Text, lviY?.Text);
+                    result = string.Compare(textX, textY);
                 }
                 if (Reverse)
                 {
