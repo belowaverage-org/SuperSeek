@@ -65,6 +65,8 @@
             tssMain2 = new ToolStripSeparator();
             tsbReveal = new ToolStripButton();
             tsbOpenWith = new ToolStripButton();
+            tslMemory = new ToolStripLabel();
+            tslCpuUsage = new ToolStripLabel();
             msMain.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)scMain).BeginInit();
             scMain.Panel1.SuspendLayout();
@@ -389,7 +391,7 @@
             // tsMain
             // 
             tsMain.GripStyle = ToolStripGripStyle.Hidden;
-            tsMain.Items.AddRange(new ToolStripItem[] { tsbOpenFolder, tsbRefreshExts, tssMain1, tsbSearchPath, tsbSearchContent, tssMain2, tsbReveal, tsbOpenWith });
+            tsMain.Items.AddRange(new ToolStripItem[] { tsbOpenFolder, tsbRefreshExts, tssMain1, tsbSearchPath, tsbSearchContent, tssMain2, tsbReveal, tsbOpenWith, tslMemory, tslCpuUsage });
             tsMain.Location = new Point(0, 24);
             tsMain.Name = "tsMain";
             tsMain.Padding = new Padding(5, 5, 5, 0);
@@ -433,6 +435,7 @@
             tsbReveal.Size = new Size(76, 35);
             tsbReveal.Text = "Show Folder";
             tsbReveal.TextImageRelation = TextImageRelation.ImageAboveText;
+            tsbReveal.ToolTipText = "Open the folder of the selected file.";
             tsbReveal.Click += OpenSelectedFiles;
             // 
             // tsbOpenWith
@@ -445,7 +448,30 @@
             tsbOpenWith.Size = new Size(77, 35);
             tsbOpenWith.Text = "Open With...";
             tsbOpenWith.TextImageRelation = TextImageRelation.ImageAboveText;
+            tsbOpenWith.ToolTipText = "Open selected file with...";
             tsbOpenWith.Click += OpenSelectedFiles;
+            // 
+            // tslMemory
+            // 
+            tslMemory.Alignment = ToolStripItemAlignment.Right;
+            tslMemory.AutoSize = false;
+            tslMemory.Image = Properties.Resources.memory_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
+            tslMemory.Name = "tslMemory";
+            tslMemory.Size = new Size(50, 35);
+            tslMemory.Text = "{0}M";
+            tslMemory.TextImageRelation = TextImageRelation.ImageAboveText;
+            tslMemory.ToolTipText = "Memory Usage";
+            // 
+            // tslCpuUsage
+            // 
+            tslCpuUsage.Alignment = ToolStripItemAlignment.Right;
+            tslCpuUsage.AutoSize = false;
+            tslCpuUsage.Image = Properties.Resources.speed_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
+            tslCpuUsage.Name = "tslCpuUsage";
+            tslCpuUsage.Size = new Size(50, 35);
+            tslCpuUsage.Text = "{0}%";
+            tslCpuUsage.TextImageRelation = TextImageRelation.ImageAboveText;
+            tslCpuUsage.ToolTipText = "CPU Usage";
             // 
             // Main
             // 
@@ -518,5 +544,7 @@
         private ToolStripButton tsbOpenWith;
         private ToolStripSeparator tssMain1;
         private ToolStripButton tsbReveal;
+        private ToolStripLabel tslCpuUsage;
+        private ToolStripLabel tslMemory;
     }
 }

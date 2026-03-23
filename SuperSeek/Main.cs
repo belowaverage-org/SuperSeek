@@ -20,8 +20,7 @@ namespace SuperSeek
         private string CurrentFolder = "C:\\";
         private Dictionary<Component, string> LabelCache = new();
         private CancellationTokenSource CTS = new();
-        private System.Windows.Forms.Timer LabelTimer = new();
-        private System.Threading.Timer Timer = new(TimerTick);
+        private System.Threading.Timer Timer;
         private bool _Running = false;
         private bool IsElevated = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
 
@@ -66,43 +65,47 @@ namespace SuperSeek
         public Main()
         {
             InitializeComponent();
-            LabelTimer.Interval = 100;
-            LabelTimer.Tick += LabelTimer_Tick;
-            LabelTimer.Enabled = true;
+            Timer = new(TimerTick);
+            Timer.Change(0, 100);
         }
 
         private void TimerTick(object? State)
         {
-
-        }
-
-        private async void LabelTimer_Tick(object? sender, EventArgs e)
-        {
-            SetLabel(tsslResults, Results.Count.ToString());
-            SetLabel(tsslScanned, Scanned.ToString());
-            SetLabel(tsslSelectedFiles, SelectedFiles.Count.ToString());
-            if (Running)
+            try
             {
-                if (Scanned > 0)
+                Invoke(() =>
                 {
-                    tspbMain.Style = ProgressBarStyle.Continuous;
-                    tspbMain.Maximum = SelectedFiles.Count;
-                    tspbMain.Value = (int)Scanned;
-                }
-                else
-                {
-                    tspbMain.Style = ProgressBarStyle.Marquee;
-                }
+                    SetLabel(tsslResults, Results.Count.ToString());
+                    SetLabel(tsslScanned, Scanned.ToString());
+                    SetLabel(tsslSelectedFiles, SelectedFiles.Count.ToString());
+                    SetLabel(tslMemory, (Environment.WorkingSet / 1024 / 1024).ToString());
+                    if (Running)
+                    {
+                        if (Scanned > 0)
+                        {
+                            tspbMain.Style = ProgressBarStyle.Continuous;
+                            tspbMain.Maximum = SelectedFiles.Count;
+                            tspbMain.Value = (int)Scanned;
+                        }
+                        else
+                        {
+                            tspbMain.Style = ProgressBarStyle.Marquee;
+                        }
+                    }
+                    else
+                    {
+                        tspbMain.Style = ProgressBarStyle.Continuous;
+                    }
+                });
             }
-            else
+            catch
             {
-                tspbMain.Style = ProgressBarStyle.Continuous;
+                //Disposing
             }
         }
 
         private void Initialize(object sender, EventArgs e)
         {
-            LabelTimer.Start();
             miToggleExtensions.Checked = !scMain.Panel1Collapsed;
             Task.Run(() =>
             {
@@ -118,11 +121,15 @@ namespace SuperSeek
             {
                 LabelCache.Add(Label, (string)textProperty.GetValue(Label)!);
             }
-            var originalText = LabelCache[Label];
+            var newText = LabelCache[Label];
             uint i = 0;
             foreach (var item in Strings)
             {
-                textProperty.SetValue(Label, originalText.Replace($"{{{i}}}", item));
+                newText = newText.Replace($"{{{i}}}", item);
+            }
+            if (newText != (string)textProperty.GetValue(Label)!)
+            {
+                textProperty.SetValue(Label, newText);
             }
         }
 
@@ -177,6 +184,7 @@ namespace SuperSeek
                 ExtensionsAndFilesSemaphore.Release();
             });
             SetLabel(tsslStatus, "Rendering extension list...");
+            Refresh();
             lvExtensions.BeginUpdate();
             List<ListViewItem> items = new();
             foreach (var item in ExtensionsAndFiles)
@@ -274,14 +282,18 @@ namespace SuperSeek
             {
                 Running = true;
                 lvResults.BeginUpdate();
+                SetLabel(tsslStatus, "Clearing...");
                 ClearResults();
                 Regex regex = new(tbMainSearch.Text, RegexOptions.IgnoreCase);
+                SetLabel(tsslStatus, "Scanning files...");
                 await ScanFilesAsync(SelectedFiles, regex);
                 List<ListViewItem> items = new();
                 foreach (var match in Results)
                 {
                     items.Add(new([match.Item1, match.Item2.ToString()]));
                 }
+                SetLabel(tsslStatus, "Rendering results...");
+                Refresh();
                 lvResults.Items.AddRange(items.ToArray());
                 lvResults.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
                 lvResults.EndUpdate();
