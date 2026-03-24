@@ -20,8 +20,12 @@ namespace SuperSeek
         private string CurrentFolder = "C:\\";
         private Dictionary<Component, string> LabelCache = new();
         private CancellationTokenSource CTS = new();
-        private System.Threading.Timer Timer;
+        private System.Threading.Timer MainTimer;
+        private System.Threading.Timer CpuUsageTimer;
+        private uint CpuUsage = 0;
         private bool _Running = false;
+        private long LastTick = Environment.TickCount64;
+        private TimeSpan LastCpuTime;
         private bool IsElevated = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
 
         private bool Running
@@ -65,11 +69,13 @@ namespace SuperSeek
         public Main()
         {
             InitializeComponent();
-            Timer = new(TimerTick);
-            Timer.Change(0, 100);
+            MainTimer = new(MainTimerTick);
+            MainTimer.Change(0, 100);
+            CpuUsageTimer = new(CpuUsageTimerTick);
+            CpuUsageTimer.Change(0, 1000);
         }
 
-        private void TimerTick(object? State)
+        private void MainTimerTick(object? State)
         {
             try
             {
@@ -78,6 +84,7 @@ namespace SuperSeek
                     SetLabel(tsslResults, Results.Count.ToString());
                     SetLabel(tsslScanned, Scanned.ToString());
                     SetLabel(tsslSelectedFiles, SelectedFiles.Count.ToString());
+                    SetLabel(tslCpuUsage, CpuUsage.ToString());
                     SetLabel(tslMemory, (Environment.WorkingSet / 1024 / 1024).ToString());
                     if (Running)
                     {
@@ -102,6 +109,18 @@ namespace SuperSeek
             {
                 //Disposing
             }
+        }
+
+        private void CpuUsageTimerTick(object? State)
+        {
+            var tickCount = Environment.TickCount64;
+            var cpuTotalTime = Environment.CpuUsage.TotalTime;
+            var elapstedTicks = tickCount - LastTick;
+            if (elapstedTicks == 0) elapstedTicks = 1;
+            var cpuUsage = (cpuTotalTime.Subtract(LastCpuTime).Ticks / elapstedTicks) / Environment.ProcessorCount / 100;
+            LastCpuTime = cpuTotalTime;
+            LastTick = tickCount;
+            CpuUsage = (uint)cpuUsage;
         }
 
         private void Initialize(object sender, EventArgs e)
