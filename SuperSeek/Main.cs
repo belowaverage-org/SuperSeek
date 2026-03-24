@@ -11,6 +11,7 @@ namespace SuperSeek
 {
     public partial class Main : Form
     {
+        private long ResourcePressureMemoryLimitBytes = 4294967296; //8GB
         private Dictionary<string, List<string>> ExtensionsAndFiles = new();
         private SemaphoreSlim ExtensionsAndFilesSemaphore = new(1);
         private List<string> SelectedFiles = new();
@@ -20,8 +21,8 @@ namespace SuperSeek
         private string CurrentFolder = "C:\\";
         private Dictionary<Component, string> LabelCache = new();
         private CancellationTokenSource CTS = new();
-        private System.Threading.Timer MainTimer;
-        private System.Threading.Timer CpuUsageTimer;
+        private System.Windows.Forms.Timer Timer100MS = new();
+        private System.Windows.Forms.Timer Timer1000MS = new();
         private uint CpuUsage = 0;
         private bool _Running = false;
         private long LastTick = Environment.TickCount64;
@@ -69,41 +70,40 @@ namespace SuperSeek
         public Main()
         {
             InitializeComponent();
-            MainTimer = new(MainTimerTick);
-            MainTimer.Change(0, 100);
-            CpuUsageTimer = new(CpuUsageTimerTick);
-            CpuUsageTimer.Change(0, 1000);
+            Timer100MS.Enabled = true;
+            Timer100MS.Interval = 100;
+            Timer100MS.Tick += Timer100MSTick;
+            Timer1000MS.Enabled = true;
+            Timer1000MS.Interval = 1000;
+            Timer1000MS.Tick += Timer1000MSTick;
         }
 
-        private void MainTimerTick(object? State)
+        private void Timer100MSTick(object? Sender, object? Args)
         {
             try
             {
-                Invoke(() =>
+                SetLabel(tsslResults, Results.Count.ToString());
+                SetLabel(tsslScanned, Scanned.ToString());
+                SetLabel(tsslSelectedFiles, SelectedFiles.Count.ToString());
+                SetLabel(tslCpuUsage, CpuUsage.ToString());
+                SetLabel(tslMemory, (Environment.WorkingSet / 1024 / 1024).ToString());
+                if (Running)
                 {
-                    SetLabel(tsslResults, Results.Count.ToString());
-                    SetLabel(tsslScanned, Scanned.ToString());
-                    SetLabel(tsslSelectedFiles, SelectedFiles.Count.ToString());
-                    SetLabel(tslCpuUsage, CpuUsage.ToString());
-                    SetLabel(tslMemory, (Environment.WorkingSet / 1024 / 1024).ToString());
-                    if (Running)
+                    if (Scanned > 0)
                     {
-                        if (Scanned > 0)
-                        {
-                            tspbMain.Style = ProgressBarStyle.Continuous;
-                            tspbMain.Maximum = SelectedFiles.Count;
-                            tspbMain.Value = (int)Scanned;
-                        }
-                        else
-                        {
-                            tspbMain.Style = ProgressBarStyle.Marquee;
-                        }
+                        tspbMain.Style = ProgressBarStyle.Continuous;
+                        tspbMain.Maximum = SelectedFiles.Count;
+                        tspbMain.Value = (int)Scanned;
                     }
                     else
                     {
-                        tspbMain.Style = ProgressBarStyle.Continuous;
+                        tspbMain.Style = ProgressBarStyle.Marquee;
                     }
-                });
+                }
+                else
+                {
+                    tspbMain.Style = ProgressBarStyle.Continuous;
+                }
             }
             catch
             {
@@ -111,7 +111,13 @@ namespace SuperSeek
             }
         }
 
-        private void CpuUsageTimerTick(object? State)
+        private void Timer1000MSTick(object? Sender, object? Args)
+        {
+            CalculateCPUUsage();
+            if (Running) new Thread(() => GC.Collect()).Start();
+        }
+
+        private void CalculateCPUUsage()
         {
             var tickCount = Environment.TickCount64;
             var cpuTotalTime = Environment.CpuUsage.TotalTime;
@@ -322,6 +328,8 @@ namespace SuperSeek
 
         private async Task ScanFilesAsync(List<string> Files, Regex Regex)
         {
+            var minWaitMS = Files.Count / 100; //this calc needs to be done more often
+            var maxWaitMS = Files.Count;
             List<Task> Tasks = new();
             foreach (var file in Files)
             {
@@ -330,6 +338,15 @@ namespace SuperSeek
                 {
                     try
                     {
+                        if (CTS.IsCancellationRequested) return;
+                        var size = new FileInfo(file).Length;
+                        if (CTS.IsCancellationRequested) return;
+                        if (size > ResourcePressureMemoryLimitBytes) return;
+                        do
+                        {
+                            await Task.Delay(Random.Shared.Next(minWaitMS, maxWaitMS), CTS.Token);
+                        }
+                        while (Environment.WorkingSet >= ResourcePressureMemoryLimitBytes - size);
                         if (CTS.IsCancellationRequested) return;
                         if (Regex.ToString() == string.Empty)
                         {
@@ -340,10 +357,9 @@ namespace SuperSeek
                         }
                         if (CTS.IsCancellationRequested) return;
                         var rmatches = 0;
-                        var content = string.Empty;
                         if (tsbSearchContent.Checked)
                         {
-                            content = await File.ReadAllTextAsync(file, CTS.Token);
+                            var content = await File.ReadAllTextAsync(file, CTS.Token);
                             if (CTS.IsCancellationRequested) return;
                             rmatches += Regex.Count(content);
                             if (CTS.IsCancellationRequested) return;
