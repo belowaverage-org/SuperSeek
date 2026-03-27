@@ -1,17 +1,26 @@
+using SuperSeek.Properties;
+using System.Collections;
 using System.ComponentModel;
-using Windows.Win32;
+using System.Diagnostics;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
-using System.Diagnostics;
+using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.WindowsAndMessaging;
-using System.Collections;
 
 namespace SuperSeek
 {
     public partial class Main : Form
     {
-        private long ResourcePressureMemoryLimitBytes = 4294967296; //8GB
+        /// <summary>
+        /// How aggressive should Super Seek be?
+        /// 0 = Max aggression: Super Seek will scan files as fast as it can without delays, and will not try to manage memory usage.
+        /// 100 = Normal aggression: Super Seek will scan files at an average of 1ms per file. So 1000 files will take at minimum 1 second to scan.
+        /// This helps value helps Super Seek spread the load over a period of time and also gives the memory management algorithm more time to work effectively.
+        /// </summary>
+        private int Aggression = 0;
+        private long MaxFileSize = 0;
+        private long ResourcePressureMemoryLimitBytes = 0;
         private Dictionary<string, List<string>> ExtensionsAndFiles = new();
         private SemaphoreSlim ExtensionsAndFilesSemaphore = new(1);
         private List<string> SelectedFiles = new();
@@ -21,13 +30,28 @@ namespace SuperSeek
         private string CurrentFolder = "C:\\";
         private Dictionary<Component, string> LabelCache = new();
         private CancellationTokenSource CTS = new();
-        private System.Windows.Forms.Timer Timer100MS = new();
-        private System.Windows.Forms.Timer Timer1000MS = new();
         private uint CpuUsage = 0;
         private bool _Running = false;
         private long LastTick = Environment.TickCount64;
         private TimeSpan LastCpuTime;
         private bool IsElevated = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+        private int MinWaitMS = 0;
+        private int MaxWaitMS = 0;
+        private bool IsClosing = false;
+        private long MemoryUsedB 
+        { 
+            get 
+            { 
+                return Environment.WorkingSet; 
+            } 
+        }
+        private int MemoryUsedMB
+        {
+            get
+            {
+                return (int)(MemoryUsedB / 1024 / 1024);
+            }
+        }
 
         private bool Running
         {
@@ -52,7 +76,10 @@ namespace SuperSeek
                     SetLabel(tsslStatus, "Idle.");
                 }
                 msMain.Enabled =
-                tsMain.Enabled =
+                tsbRefreshExts.Enabled =
+                tsbOpenFolder.Enabled =
+                tsbSearchPath.Enabled =
+                tsbSearchContent.Enabled =
                 lvResults.Enabled =
                 tbMainSearch.Enabled =
                 scMain.Panel1.Enabled =
@@ -70,51 +97,93 @@ namespace SuperSeek
         public Main()
         {
             InitializeComponent();
-            Timer100MS.Enabled = true;
-            Timer100MS.Interval = 100;
-            Timer100MS.Tick += Timer100MSTick;
-            Timer1000MS.Enabled = true;
-            Timer1000MS.Interval = 1000;
-            Timer1000MS.Tick += Timer1000MSTick;
+            new Thread(TimerThread).Start();
         }
 
-        private void Timer100MSTick(object? Sender, object? Args)
+        private void TimerThread()
+        {
+            int counter = 0;
+            while (!IsClosing) {
+                new Thread(Timer100MSTick).Start();
+                if (counter++ >= 10)
+                {
+                    new Thread(Timer1000MSTick).Start();
+                    counter = 0;
+                }
+                Thread.Sleep(100);
+            }
+        }
+
+        private void Timer100MSTick()
+        {
+            UpdateForm();
+            if (Running) CalculateWaits();
+        }
+
+        private void UpdateForm()
         {
             try
             {
-                SetLabel(tsslResults, Results.Count.ToString());
-                SetLabel(tsslScanned, Scanned.ToString());
-                SetLabel(tsslSelectedFiles, SelectedFiles.Count.ToString());
-                SetLabel(tslCpuUsage, CpuUsage.ToString());
-                SetLabel(tslMemory, (Environment.WorkingSet / 1024 / 1024).ToString());
-                if (Running)
+                Invoke(() =>
                 {
-                    if (Scanned > 0)
+                    SetLabel(tsslResults, Results.Count.ToString());
+                    SetLabel(tsslScanned, Scanned.ToString());
+                    SetLabel(tsslSelectedFiles, SelectedFiles.Count.ToString());
+                    SetLabel(tslCpuUsage, CpuUsage.ToString());
+                    SetLabel(tslMemory, MemoryUsedMB.ToString());
+                    if (CpuUsage < 10)
                     {
-                        tspbMain.Style = ProgressBarStyle.Continuous;
-                        tspbMain.Maximum = SelectedFiles.Count;
-                        tspbMain.Value = (int)Scanned;
+                        tslCpuUsage.Image = Resources.speed_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
+                    }
+                    if (CpuUsage >= 10 && CpuUsage < 50)
+                    {
+                        tslCpuUsage.Image = Resources.speed_16dp_F19E39_FILL0_wght400_GRAD0_opsz20;
+                    }
+                    if (CpuUsage >= 50)
+                    {
+                        tslCpuUsage.Image = Resources.speed_16dp_EA3323_FILL0_wght400_GRAD0_opsz20;
+                    }
+                    if (CpuUsage < 10)
+                    {
+                        tslCpuUsage.Image = Resources.speed_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
+                    }
+                    if (CpuUsage >= 10 && CpuUsage < 50)
+                    {
+                        tslCpuUsage.Image = Resources.speed_16dp_F19E39_FILL0_wght400_GRAD0_opsz20;
+                    }
+                    if (CpuUsage >= 50)
+                    {
+                        tslCpuUsage.Image = Resources.speed_16dp_EA3323_FILL0_wght400_GRAD0_opsz20;
+                    }
+                    if (Running)
+                    {
+                        if (Scanned > 0)
+                        {
+                            tspbMain.Style = ProgressBarStyle.Continuous;
+                            tspbMain.Maximum = SelectedFiles.Count;
+                            tspbMain.Value = (int)Scanned;
+                        }
+                        else
+                        {
+                            tspbMain.Style = ProgressBarStyle.Marquee;
+                        }
                     }
                     else
                     {
-                        tspbMain.Style = ProgressBarStyle.Marquee;
+                        tspbMain.Style = ProgressBarStyle.Continuous;
                     }
-                }
-                else
-                {
-                    tspbMain.Style = ProgressBarStyle.Continuous;
-                }
+                });
             }
             catch
             {
-                //Disposing
+                //Form disposed.
             }
         }
 
-        private void Timer1000MSTick(object? Sender, object? Args)
+        private void Timer1000MSTick()
         {
             CalculateCPUUsage();
-            if (Running) new Thread(() => GC.Collect()).Start();
+            if (Running) GC.Collect(GC.MaxGeneration, GCCollectionMode.Default, false, false);
         }
 
         private void CalculateCPUUsage()
@@ -129,13 +198,19 @@ namespace SuperSeek
             CpuUsage = (uint)cpuUsage;
         }
 
+        private void CalculateWaits()
+        {
+            var aggression = (float)Aggression / 100;
+            var remainingFiles = SelectedFiles.Count - Scanned;
+            MinWaitMS = (int)((remainingFiles / 100) * aggression);
+            MaxWaitMS = (int)((remainingFiles) * aggression);
+        }
+
         private void Initialize(object sender, EventArgs e)
         {
             miToggleExtensions.Checked = !scMain.Panel1Collapsed;
-            Task.Run(() =>
-            {
-                Invoke(miOpenFolder.PerformClick);
-            });
+            new Settings().ShowDialog();
+            OpenFolder(null, null);
         }
 
         private void SetLabel(Component Label, params string[] Strings)
@@ -286,7 +361,8 @@ namespace SuperSeek
 
         private async Task Cancel(bool Close = false)
         {
-            SetLabel(tsslStatus, "Cancelling...");
+            if (Close) SetLabel(tsslStatus, "Closing...");
+            if (!Close) SetLabel(tsslStatus, "Cancelling...");
             await CTS.CancelAsync();
             if (Close)
             {
@@ -311,6 +387,7 @@ namespace SuperSeek
                 ClearResults();
                 Regex regex = new(tbMainSearch.Text, RegexOptions.IgnoreCase);
                 SetLabel(tsslStatus, "Scanning files...");
+                CalculateWaits();
                 await ScanFilesAsync(SelectedFiles, regex);
                 List<ListViewItem> items = new();
                 foreach (var match in Results)
@@ -328,8 +405,6 @@ namespace SuperSeek
 
         private async Task ScanFilesAsync(List<string> Files, Regex Regex)
         {
-            var minWaitMS = Files.Count / 100; //this calc needs to be done more often
-            var maxWaitMS = Files.Count;
             List<Task> Tasks = new();
             foreach (var file in Files)
             {
@@ -339,21 +414,25 @@ namespace SuperSeek
                     try
                     {
                         if (CTS.IsCancellationRequested) return;
-                        var size = new FileInfo(file).Length;
-                        if (CTS.IsCancellationRequested) return;
-                        if (size > ResourcePressureMemoryLimitBytes) return;
-                        do
-                        {
-                            await Task.Delay(Random.Shared.Next(minWaitMS, maxWaitMS), CTS.Token);
-                        }
-                        while (Environment.WorkingSet >= ResourcePressureMemoryLimitBytes - size);
-                        if (CTS.IsCancellationRequested) return;
                         if (Regex.ToString() == string.Empty)
                         {
                             await ResultsSemaphore.WaitAsync(CTS.Token);
                             Results.Add((file, 0));
+                            Scanned++;
                             ResultsSemaphore.Release();
                             return;
+                        }
+                        if (CTS.IsCancellationRequested) return;
+                        var size = new FileInfo(file).Length;
+                        if (CTS.IsCancellationRequested) return;
+                        if (size > MaxFileSize || size > ResourcePressureMemoryLimitBytes) return;
+                        if (tsbSearchContent.Checked && Aggression > 0)
+                        {
+                            do
+                            {
+                                await Task.Delay(Random.Shared.Next(MinWaitMS, MaxWaitMS), CTS.Token);
+                            }
+                            while (MemoryUsedB >= ResourcePressureMemoryLimitBytes - size);
                         }
                         if (CTS.IsCancellationRequested) return;
                         var rmatches = 0;
@@ -386,6 +465,10 @@ namespace SuperSeek
             {
                 e.Cancel = true;
                 _ = Cancel(true);
+            }
+            else
+            {
+                IsClosing = true;
             }
         }
 

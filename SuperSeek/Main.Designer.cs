@@ -30,7 +30,6 @@
         {
             msMain = new MenuStrip();
             miFile = new ToolStripMenuItem();
-            miOpenFolder = new ToolStripMenuItem();
             tssFile1 = new ToolStripSeparator();
             miExit = new ToolStripMenuItem();
             miView = new ToolStripMenuItem();
@@ -67,6 +66,7 @@
             tsbOpenWith = new ToolStripButton();
             tslMemory = new ToolStripLabel();
             tslCpuUsage = new ToolStripLabel();
+            miSettings = new ToolStripMenuItem();
             msMain.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)scMain).BeginInit();
             scMain.Panel1.SuspendLayout();
@@ -91,29 +91,21 @@
             // 
             // miFile
             // 
-            miFile.DropDownItems.AddRange(new ToolStripItem[] { miOpenFolder, tssFile1, miExit });
+            miFile.DropDownItems.AddRange(new ToolStripItem[] { miSettings, tssFile1, miExit });
             miFile.Name = "miFile";
             miFile.Size = new Size(37, 20);
             miFile.Text = "&File";
             // 
-            // miOpenFolder
-            // 
-            miOpenFolder.Image = Properties.Resources.folder_open_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
-            miOpenFolder.Name = "miOpenFolder";
-            miOpenFolder.Size = new Size(148, 22);
-            miOpenFolder.Text = "&Open Folder...";
-            miOpenFolder.Click += OpenFolder;
-            // 
             // tssFile1
             // 
             tssFile1.Name = "tssFile1";
-            tssFile1.Size = new Size(145, 6);
+            tssFile1.Size = new Size(177, 6);
             // 
             // miExit
             // 
             miExit.Image = Properties.Resources.close_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
             miExit.Name = "miExit";
-            miExit.Size = new Size(148, 22);
+            miExit.Size = new Size(180, 22);
             miExit.Text = "&Exit";
             miExit.Click += miExit_Click;
             // 
@@ -473,6 +465,12 @@
             tslCpuUsage.TextImageRelation = TextImageRelation.ImageAboveText;
             tslCpuUsage.ToolTipText = "CPU Usage";
             // 
+            // miSettings
+            // 
+            miSettings.Name = "miSettings";
+            miSettings.Size = new Size(180, 22);
+            miSettings.Text = "Settings...";
+            // 
             // Main
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -512,7 +510,6 @@
         private TableLayoutPanel tlpResults;
         private TextBox tbMainSearch;
         private ToolStripMenuItem miFile;
-        private ToolStripMenuItem miOpenFolder;
         private ToolStripSeparator tssFile1;
         private ToolStripMenuItem miExit;
         private StatusStrip ssMain;
@@ -546,5 +543,6 @@
         private ToolStripButton tsbReveal;
         private ToolStripLabel tslCpuUsage;
         private ToolStripLabel tslMemory;
+        private ToolStripMenuItem miSettings;
     }
 }
