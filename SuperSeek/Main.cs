@@ -18,9 +18,7 @@ namespace SuperSeek
         /// 100 = Normal aggression: Super Seek will scan files at an average of 1ms per file. So 1000 files will take at minimum 1 second to scan.
         /// This helps value helps Super Seek spread the load over a period of time and also gives the memory management algorithm more time to work effectively.
         /// </summary>
-        private int Aggression = 0;
-        private long MaxFileSize = 0;
-        private long ResourcePressureMemoryLimitBytes = 0;
+        private Settings Settings = new Settings();
         private Dictionary<string, List<string>> ExtensionsAndFiles = new();
         private SemaphoreSlim ExtensionsAndFilesSemaphore = new(1);
         private List<string> SelectedFiles = new();
@@ -38,12 +36,12 @@ namespace SuperSeek
         private int MinWaitMS = 0;
         private int MaxWaitMS = 0;
         private bool IsClosing = false;
-        private long MemoryUsedB 
-        { 
-            get 
-            { 
-                return Environment.WorkingSet; 
-            } 
+        private long MemoryUsedB
+        {
+            get
+            {
+                return Environment.WorkingSet;
+            }
         }
         private int MemoryUsedMB
         {
@@ -103,7 +101,8 @@ namespace SuperSeek
         private void TimerThread()
         {
             int counter = 0;
-            while (!IsClosing) {
+            while (!IsClosing)
+            {
                 new Thread(Timer100MSTick).Start();
                 if (counter++ >= 10)
                 {
@@ -200,7 +199,7 @@ namespace SuperSeek
 
         private void CalculateWaits()
         {
-            var aggression = (float)Aggression / 100;
+            var aggression = (float)Settings.ScanAggression / 100;
             var remainingFiles = SelectedFiles.Count - Scanned;
             MinWaitMS = (int)((remainingFiles / 100) * aggression);
             MaxWaitMS = (int)((remainingFiles) * aggression);
@@ -209,7 +208,7 @@ namespace SuperSeek
         private void Initialize(object sender, EventArgs e)
         {
             miToggleExtensions.Checked = !scMain.Panel1Collapsed;
-            new Settings().ShowDialog();
+            Settings.ShowDialog();
             OpenFolder(null, null);
         }
 
@@ -425,14 +424,14 @@ namespace SuperSeek
                         if (CTS.IsCancellationRequested) return;
                         var size = new FileInfo(file).Length;
                         if (CTS.IsCancellationRequested) return;
-                        if (size > MaxFileSize || size > ResourcePressureMemoryLimitBytes) return;
-                        if (tsbSearchContent.Checked && Aggression > 0)
+                        if (size > Settings.MaxFileSize || size > Settings.MemoryCeiling) return;
+                        if (tsbSearchContent.Checked && Settings.ScanAggression > 0)
                         {
                             do
                             {
                                 await Task.Delay(Random.Shared.Next(MinWaitMS, MaxWaitMS), CTS.Token);
                             }
-                            while (MemoryUsedB >= ResourcePressureMemoryLimitBytes - size);
+                            while (MemoryUsedB >= Settings.MemoryCeiling - size);
                         }
                         if (CTS.IsCancellationRequested) return;
                         var rmatches = 0;
@@ -604,6 +603,11 @@ namespace SuperSeek
                     return result;
                 }
             }
+        }
+
+        private async void miSettings_ClickAsync(object sender, EventArgs e)
+        {
+            await Settings.ShowDialogAsync(this);
         }
     }
 }

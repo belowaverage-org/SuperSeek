@@ -23,9 +23,9 @@
             return (int)(B / 1024 / 1024);
         }
 
-        private int ToB(string MB)
+        private long ToB(string MB)
         {
-            return (int.Parse(MB.Replace("MB", "")) * 1024 * 1024);
+            return (long.Parse(MB.Replace("MB", "")) * 1024 * 1024);
         }
 
         private void btnOK_Click(object sender, EventArgs e)

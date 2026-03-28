@@ -30,6 +30,7 @@
         {
             msMain = new MenuStrip();
             miFile = new ToolStripMenuItem();
+            miSettings = new ToolStripMenuItem();
             tssFile1 = new ToolStripSeparator();
             miExit = new ToolStripMenuItem();
             miView = new ToolStripMenuItem();
@@ -66,7 +67,6 @@
             tsbOpenWith = new ToolStripButton();
             tslMemory = new ToolStripLabel();
             tslCpuUsage = new ToolStripLabel();
-            miSettings = new ToolStripMenuItem();
             msMain.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)scMain).BeginInit();
             scMain.Panel1.SuspendLayout();
@@ -95,6 +95,13 @@
             miFile.Name = "miFile";
             miFile.Size = new Size(37, 20);
             miFile.Text = "&File";
+            // 
+            // miSettings
+            // 
+            miSettings.Name = "miSettings";
+            miSettings.Size = new Size(180, 22);
+            miSettings.Text = "Settings...";
+            miSettings.Click += miSettings_ClickAsync;
             // 
             // tssFile1
             // 
@@ -464,12 +471,6 @@
             tslCpuUsage.Text = "{0}%";
             tslCpuUsage.TextImageRelation = TextImageRelation.ImageAboveText;
             tslCpuUsage.ToolTipText = "CPU Usage";
-            // 
-            // miSettings
-            // 
-            miSettings.Name = "miSettings";
-            miSettings.Size = new Size(180, 22);
-            miSettings.Text = "Settings...";
             // 
             // Main
             // 
