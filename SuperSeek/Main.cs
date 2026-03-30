@@ -12,45 +12,26 @@ namespace SuperSeek
 {
     public partial class Main : Form
     {
-        /// <summary>
-        /// How aggressive should Super Seek be?
-        /// 0 = Max aggression: Super Seek will scan files as fast as it can without delays, and will not try to manage memory usage.
-        /// 100 = Normal aggression: Super Seek will scan files at an average of 1ms per file. So 1000 files will take at minimum 1 second to scan.
-        /// This helps value helps Super Seek spread the load over a period of time and also gives the memory management algorithm more time to work effectively.
-        /// </summary>
-        private Settings Settings = new Settings();
-        private Dictionary<string, List<string>> ExtensionsAndFiles = new();
-        private SemaphoreSlim ExtensionsAndFilesSemaphore = new(1);
-        private List<string> SelectedFiles = new();
-        private List<(string, int)> Results = new();
-        private SemaphoreSlim ResultsSemaphore = new(1);
+        private readonly Settings Settings = new();
+        private readonly Dictionary<string, List<string>> ExtensionsAndFiles = [];
+        private readonly SemaphoreSlim ExtensionsAndFilesSemaphore = new(1);
+        private readonly List<string> SelectedFiles = [];
+        private readonly List<(string, int)> Results = [];
+        private readonly SemaphoreSlim ResultsSemaphore = new(1);
+        private readonly Dictionary<Component, string> LabelCache = [];
+        private readonly bool IsElevated = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
         private uint Scanned = 0;
         private string CurrentFolder = "C:\\";
-        private Dictionary<Component, string> LabelCache = new();
         private CancellationTokenSource CTS = new();
         private uint CpuUsage = 0;
         private bool _Running = false;
         private long LastTick = Environment.TickCount64;
         private TimeSpan LastCpuTime;
-        private bool IsElevated = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
         private int MinWaitMS = 0;
         private int MaxWaitMS = 0;
         private bool IsClosing = false;
-        private long MemoryUsedB
-        {
-            get
-            {
-                return Environment.WorkingSet;
-            }
-        }
-        private int MemoryUsedMB
-        {
-            get
-            {
-                return (int)(MemoryUsedB / 1024 / 1024);
-            }
-        }
-
+        private static long MemoryUsedB => Environment.WorkingSet;
+        private static int MemoryUsedMB => (int)(MemoryUsedB / 1024 / 1024);
         private bool Running
         {
             get
@@ -85,8 +66,7 @@ namespace SuperSeek
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
             }
         }
-
-        private EnumerationOptions EnumerationOptions = new()
+        private readonly EnumerationOptions EnumerationOptions = new()
         {
             RecurseSubdirectories = false,
             IgnoreInaccessible = true
@@ -96,6 +76,29 @@ namespace SuperSeek
         {
             InitializeComponent();
             new Thread(TimerThread).Start();
+        }
+
+        private static bool GetSetSortColumn(ListView ListView, int Column)
+        {
+            var col = ListView.Columns[Column];
+            foreach (ColumnHeader icol in ListView.Columns)
+            {
+                if (icol.Index == Column) continue;
+                icol.Text = icol.Text.Replace("▼ ", string.Empty);
+                icol.Text = icol.Text.Replace("▲ ", string.Empty);
+            }
+            if (col.Text.StartsWith("▼ "))
+            {
+                col.Text = col.Text.Replace('▼', '▲');
+                return true;
+            }
+            if (col.Text.StartsWith("▲ "))
+            {
+                col.Text = col.Text.Replace('▲', '▼');
+                return false;
+            }
+            col.Text = $"▼ {col.Text}";
+            return false;
         }
 
         private void TimerThread()
@@ -209,18 +212,20 @@ namespace SuperSeek
         {
             miToggleExtensions.Checked = !scMain.Panel1Collapsed;
             Settings.ShowDialog();
-            OpenFolder(null, null);
+            OpenFolder(null!, null!);
+            TopMost = true;
+            TopMost = false;
         }
 
         private void SetLabel(Component Label, params string[] Strings)
         {
             var textProperty = Label.GetType().GetProperties().First((pi) => { return pi.Name == "Text"; });
             if (textProperty == null) return;
-            if (!LabelCache.ContainsKey(Label))
+            if (!LabelCache.TryGetValue(Label, out string? newText))
             {
-                LabelCache.Add(Label, (string)textProperty.GetValue(Label)!);
+                newText = (string)textProperty.GetValue(Label)!;
+                LabelCache.Add(Label, newText);
             }
-            var newText = LabelCache[Label];
             uint i = 0;
             foreach (var item in Strings)
             {
@@ -273,7 +278,7 @@ namespace SuperSeek
                 {
                     var ext = file.Extension.ToLower();
                     await ExtensionsAndFilesSemaphore.WaitAsync(CTS.Token);
-                    var added = ExtensionsAndFiles.TryAdd(ext, new List<string>());
+                    var added = ExtensionsAndFiles.TryAdd(ext, []);
                     ExtensionsAndFiles[ext].Add(file.FullName);
                 }
                 catch
@@ -285,18 +290,18 @@ namespace SuperSeek
             SetLabel(tsslStatus, "Rendering extension list...");
             Refresh();
             lvExtensions.BeginUpdate();
-            List<ListViewItem> items = new();
+            List<ListViewItem> items = [];
             foreach (var item in ExtensionsAndFiles)
             {
                 items.Add(new([item.Key, item.Value.Count.ToString()]));
             }
-            lvExtensions.Items.AddRange(items.ToArray());
+            lvExtensions.Items.AddRange([.. items]);
             lvExtensions.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
             lvExtensions.EndUpdate();
             Running = false;
         }
 
-        private async void miExit_Click(object sender, EventArgs e)
+        private async void MiExit_Click(object sender, EventArgs e)
         {
             await Cancel(true);
         }
@@ -312,7 +317,7 @@ namespace SuperSeek
             if (CTS.IsCancellationRequested) return;
             await Task.Run(async () =>
             {
-                List<Task> Tasks = new();
+                List<Task> Tasks = [];
                 var dirs = DirectoryInfo.GetDirectories("*", EnumerationOptions);
                 foreach (DirectoryInfo dir in dirs)
                 {
@@ -329,7 +334,7 @@ namespace SuperSeek
             });
         }
 
-        private void lvExtensions_ItemChecked(object sender, ItemCheckedEventArgs e)
+        private void LvExtensions_ItemChecked(object sender, ItemCheckedEventArgs e)
         {
             if (Running) return;
             SelectedFiles.Clear();
@@ -347,7 +352,7 @@ namespace SuperSeek
             item?.EnsureVisible();
         }
 
-        private void tbExtensionSearch_KeyDown(object sender, KeyEventArgs e)
+        private void TbExtensionSearch_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Space)
             {
@@ -388,14 +393,14 @@ namespace SuperSeek
                 SetLabel(tsslStatus, "Scanning files...");
                 CalculateWaits();
                 await ScanFilesAsync(SelectedFiles, regex);
-                List<ListViewItem> items = new();
+                List<ListViewItem> items = [];
                 foreach (var match in Results)
                 {
                     items.Add(new([match.Item1, match.Item2.ToString()]));
                 }
                 SetLabel(tsslStatus, "Rendering results...");
                 Refresh();
-                lvResults.Items.AddRange(items.ToArray());
+                lvResults.Items.AddRange([.. items]);
                 lvResults.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
                 lvResults.EndUpdate();
                 Running = false;
@@ -404,7 +409,7 @@ namespace SuperSeek
 
         private async Task ScanFilesAsync(List<string> Files, Regex Regex)
         {
-            List<Task> Tasks = new();
+            List<Task> Tasks = [];
             foreach (var file in Files)
             {
                 if (CTS.IsCancellationRequested) break;
@@ -471,7 +476,7 @@ namespace SuperSeek
             }
         }
 
-        private void tbMainSearch_KeyDown(object sender, KeyEventArgs e)
+        private void TbMainSearch_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
@@ -522,14 +527,14 @@ namespace SuperSeek
             PInvoke.ShellExecute(HWND.Null, null, File, null, null, SHOW_WINDOW_CMD.SW_NORMAL);
         }
 
-        private void lvResults_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
+        private void LvResults_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
         {
             tsbOpenWith.Enabled =
             tsbReveal.Enabled =
             lvResults.SelectedItems.Count > 0;
         }
 
-        private void lvResults_KeyDown(object sender, KeyEventArgs e)
+        private void LvResults_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
@@ -547,41 +552,14 @@ namespace SuperSeek
             lv.Sort();
         }
 
-        private bool GetSetSortColumn(ListView ListView, int Column)
+        private class ColumnComparer(int Column, bool Reverse = false) : IComparer
         {
-            var col = ListView.Columns[Column];
-            foreach (ColumnHeader icol in ListView.Columns)
-            {
-                if (icol.Index == Column) continue;
-                icol.Text = icol.Text.Replace("▼ ", string.Empty);
-                icol.Text = icol.Text.Replace("▲ ", string.Empty);
-            }
-            if (col.Text.StartsWith("▼ "))
-            {
-                col.Text = col.Text.Replace('▼', '▲');
-                return true;
-            }
-            if (col.Text.StartsWith("▲ "))
-            {
-                col.Text = col.Text.Replace('▲', '▼');
-                return false;
-            }
-            col.Text = $"▼ {col.Text}";
-            return false;
-        }
+            private readonly int Column = Column;
+            private readonly bool Reverse = Reverse;
 
-        private class ColumnComparer : IComparer
-        {
-            private int Column;
-            private bool Reverse;
-            public ColumnComparer(int Column, bool Reverse = false)
-            {
-                this.Column = Column;
-                this.Reverse = Reverse;
-            }
             public int Compare(object? x, object? y)
             {
-                var result = 0;
+                int result;
                 var lviX = (ListViewItem?)x;
                 var lviY = (ListViewItem?)y;
                 var textX = lviX?.SubItems[Column].Text;
@@ -605,7 +583,7 @@ namespace SuperSeek
             }
         }
 
-        private async void miSettings_ClickAsync(object sender, EventArgs e)
+        private async void MiSettings_ClickAsync(object sender, EventArgs e)
         {
             await Settings.ShowDialogAsync(this);
         }

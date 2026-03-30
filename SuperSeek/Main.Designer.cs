@@ -99,22 +99,22 @@
             // miSettings
             // 
             miSettings.Name = "miSettings";
-            miSettings.Size = new Size(180, 22);
+            miSettings.Size = new Size(125, 22);
             miSettings.Text = "Settings...";
-            miSettings.Click += miSettings_ClickAsync;
+            miSettings.Click += MiSettings_ClickAsync;
             // 
             // tssFile1
             // 
             tssFile1.Name = "tssFile1";
-            tssFile1.Size = new Size(177, 6);
+            tssFile1.Size = new Size(122, 6);
             // 
             // miExit
             // 
             miExit.Image = Properties.Resources.close_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
             miExit.Name = "miExit";
-            miExit.Size = new Size(180, 22);
+            miExit.Size = new Size(125, 22);
             miExit.Text = "&Exit";
-            miExit.Click += miExit_Click;
+            miExit.Click += MiExit_Click;
             // 
             // miView
             // 
@@ -179,7 +179,7 @@
             tbExtensionSearch.Size = new Size(224, 28);
             tbExtensionSearch.TabIndex = 2;
             tbExtensionSearch.TextChanged += FilterExtensions;
-            tbExtensionSearch.KeyDown += tbExtensionSearch_KeyDown;
+            tbExtensionSearch.KeyDown += TbExtensionSearch_KeyDown;
             // 
             // lvExtensions
             // 
@@ -196,7 +196,7 @@
             lvExtensions.UseCompatibleStateImageBehavior = false;
             lvExtensions.View = View.Details;
             lvExtensions.ColumnClick += SortColumn;
-            lvExtensions.ItemChecked += lvExtensions_ItemChecked;
+            lvExtensions.ItemChecked += LvExtensions_ItemChecked;
             // 
             // chExtension
             // 
@@ -237,8 +237,8 @@
             lvResults.UseCompatibleStateImageBehavior = false;
             lvResults.View = View.Details;
             lvResults.ColumnClick += SortColumn;
-            lvResults.ItemSelectionChanged += lvResults_ItemSelectionChanged;
-            lvResults.KeyDown += lvResults_KeyDown;
+            lvResults.ItemSelectionChanged += LvResults_ItemSelectionChanged;
+            lvResults.KeyDown += LvResults_KeyDown;
             lvResults.MouseDoubleClick += OpenSelectedFiles;
             // 
             // chFile
@@ -277,7 +277,7 @@
             tbMainSearch.PlaceholderText = "Regular Expressions";
             tbMainSearch.Size = new Size(465, 28);
             tbMainSearch.TabIndex = 1;
-            tbMainSearch.KeyDown += tbMainSearch_KeyDown;
+            tbMainSearch.KeyDown += TbMainSearch_KeyDown;
             // 
             // btnSearchOrCancel
             // 
@@ -483,6 +483,7 @@
             Controls.Add(msMain);
             MainMenuStrip = msMain;
             Name = "Main";
+            StartPosition = FormStartPosition.CenterScreen;
             Text = "Super Seek: High Performance File Search Tool";
             FormClosing += Main_FormClosing;
             Load += Initialize;

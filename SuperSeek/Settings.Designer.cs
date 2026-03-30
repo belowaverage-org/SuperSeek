@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Settings));
             btnCancel = new Button();
             btnOK = new Button();
             tlpMain = new TableLayoutPanel();
@@ -35,10 +36,14 @@
             lblMemCeiling = new Label();
             lblMaxFileSize = new Label();
             lblScan = new Label();
-            tbAggression = new TrackBar();
             mtbMaxFileSize = new MaskedTextBox();
+            tlpScanAgg = new TableLayoutPanel();
+            tbAggression = new TrackBar();
+            lblMin = new Label();
+            lblMax = new Label();
             hpMain = new HelpProvider();
             tlpMain.SuspendLayout();
+            tlpScanAgg.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)tbAggression).BeginInit();
             SuspendLayout();
             // 
@@ -61,7 +66,7 @@
             btnOK.TabIndex = 1;
             btnOK.Text = "&OK";
             btnOK.UseVisualStyleBackColor = true;
-            btnOK.Click += btnOK_Click;
+            btnOK.Click += BtnOK_Click;
             // 
             // tlpMain
             // 
@@ -72,8 +77,8 @@
             tlpMain.Controls.Add(lblMemCeiling, 0, 4);
             tlpMain.Controls.Add(lblMaxFileSize, 0, 2);
             tlpMain.Controls.Add(lblScan, 0, 0);
-            tlpMain.Controls.Add(tbAggression, 0, 1);
             tlpMain.Controls.Add(mtbMaxFileSize, 0, 3);
+            tlpMain.Controls.Add(tlpScanAgg, 0, 1);
             tlpMain.Dock = DockStyle.Top;
             tlpMain.Location = new Point(0, 0);
             tlpMain.Name = "tlpMain";
@@ -107,10 +112,11 @@
             lblMemCeiling.AutoSize = true;
             lblMemCeiling.Dock = DockStyle.Bottom;
             hpMain.SetHelpString(lblMemCeiling, "How much memory should Super Seek consume before throttling scans?");
-            lblMemCeiling.Location = new Point(13, 140);
+            lblMemCeiling.Location = new Point(10, 140);
+            lblMemCeiling.Margin = new Padding(0);
             lblMemCeiling.Name = "lblMemCeiling";
             hpMain.SetShowHelp(lblMemCeiling, true);
-            lblMemCeiling.Size = new Size(258, 15);
+            lblMemCeiling.Size = new Size(264, 15);
             lblMemCeiling.TabIndex = 3;
             lblMemCeiling.Text = "Memory Ceiling";
             // 
@@ -119,10 +125,11 @@
             lblMaxFileSize.AutoSize = true;
             lblMaxFileSize.Dock = DockStyle.Bottom;
             hpMain.SetHelpString(lblMaxFileSize, "Max file size that Super Seek will scan.");
-            lblMaxFileSize.Location = new Point(13, 78);
+            lblMaxFileSize.Location = new Point(10, 78);
+            lblMaxFileSize.Margin = new Padding(0);
             lblMaxFileSize.Name = "lblMaxFileSize";
             hpMain.SetShowHelp(lblMaxFileSize, true);
-            lblMaxFileSize.Size = new Size(258, 15);
+            lblMaxFileSize.Size = new Size(264, 15);
             lblMaxFileSize.TabIndex = 2;
             lblMaxFileSize.Text = "Max File Size";
             // 
@@ -130,27 +137,14 @@
             // 
             lblScan.AutoSize = true;
             lblScan.Dock = DockStyle.Bottom;
-            hpMain.SetHelpString(lblScan, "How aggressive should Super Seek be when scanning file contents?");
-            lblScan.Location = new Point(13, 16);
+            hpMain.SetHelpString(lblScan, resources.GetString("lblScan.HelpString"));
+            lblScan.Location = new Point(10, 16);
+            lblScan.Margin = new Padding(0);
             lblScan.Name = "lblScan";
             hpMain.SetShowHelp(lblScan, true);
-            lblScan.Size = new Size(258, 15);
+            lblScan.Size = new Size(264, 15);
             lblScan.TabIndex = 0;
             lblScan.Text = "Scan Aggressiveness";
-            // 
-            // tbAggression
-            // 
-            tbAggression.Dock = DockStyle.Bottom;
-            hpMain.SetHelpString(tbAggression, "How aggressive should Super Seek be when scanning file contents?");
-            tbAggression.LargeChange = 10;
-            tbAggression.Location = new Point(13, 34);
-            tbAggression.Maximum = 200;
-            tbAggression.Name = "tbAggression";
-            hpMain.SetShowHelp(tbAggression, true);
-            tbAggression.Size = new Size(258, 25);
-            tbAggression.TabIndex = 1;
-            tbAggression.TickFrequency = 10;
-            tbAggression.TickStyle = TickStyle.TopLeft;
             // 
             // mtbMaxFileSize
             // 
@@ -164,6 +158,66 @@
             mtbMaxFileSize.Size = new Size(258, 23);
             mtbMaxFileSize.TabIndex = 4;
             // 
+            // tlpScanAgg
+            // 
+            tlpScanAgg.ColumnCount = 3;
+            tlpScanAgg.ColumnStyles.Add(new ColumnStyle());
+            tlpScanAgg.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tlpScanAgg.ColumnStyles.Add(new ColumnStyle());
+            tlpScanAgg.Controls.Add(tbAggression, 1, 0);
+            tlpScanAgg.Controls.Add(lblMin, 0, 0);
+            tlpScanAgg.Controls.Add(lblMax, 2, 0);
+            tlpScanAgg.Dock = DockStyle.Fill;
+            tlpScanAgg.Location = new Point(10, 31);
+            tlpScanAgg.Margin = new Padding(0);
+            tlpScanAgg.Name = "tlpScanAgg";
+            tlpScanAgg.RowCount = 1;
+            tlpScanAgg.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tlpScanAgg.Size = new Size(264, 31);
+            tlpScanAgg.TabIndex = 6;
+            // 
+            // tbAggression
+            // 
+            tbAggression.AutoSize = false;
+            tbAggression.Dock = DockStyle.Bottom;
+            hpMain.SetHelpString(tbAggression, resources.GetString("tbAggression.HelpString"));
+            tbAggression.LargeChange = 10;
+            tbAggression.Location = new Point(28, 6);
+            tbAggression.Margin = new Padding(0);
+            tbAggression.Maximum = 200;
+            tbAggression.Name = "tbAggression";
+            hpMain.SetShowHelp(tbAggression, true);
+            tbAggression.Size = new Size(206, 25);
+            tbAggression.TabIndex = 1;
+            tbAggression.TickFrequency = 10;
+            tbAggression.TickStyle = TickStyle.TopLeft;
+            // 
+            // lblMin
+            // 
+            lblMin.AutoSize = true;
+            lblMin.Dock = DockStyle.Bottom;
+            hpMain.SetHelpString(lblMin, "Lowest scan aggression, Each file to be scanned will add 2ms to the scan spread timeframe.");
+            lblMin.Location = new Point(0, 16);
+            lblMin.Margin = new Padding(0);
+            lblMin.Name = "lblMin";
+            hpMain.SetShowHelp(lblMin, true);
+            lblMin.Size = new Size(28, 15);
+            lblMin.TabIndex = 2;
+            lblMin.Text = "Min";
+            // 
+            // lblMax
+            // 
+            lblMax.AutoSize = true;
+            lblMax.Dock = DockStyle.Bottom;
+            hpMain.SetHelpString(lblMax, "If set to max, scan aggression algorithm will not run, and Memory Ceiling will not be respected.");
+            lblMax.Location = new Point(234, 16);
+            lblMax.Margin = new Padding(0);
+            lblMax.Name = "lblMax";
+            hpMain.SetShowHelp(lblMax, true);
+            lblMax.Size = new Size(30, 15);
+            lblMax.TabIndex = 3;
+            lblMax.Text = "Max";
+            // 
             // Settings
             // 
             AcceptButton = btnOK;
@@ -174,17 +228,18 @@
             Controls.Add(tlpMain);
             Controls.Add(btnOK);
             Controls.Add(btnCancel);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
+            FormBorderStyle = FormBorderStyle.FixedSingle;
             HelpButton = true;
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "Settings";
-            ShowIcon = false;
-            ShowInTaskbar = false;
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             Text = "Settings";
+            TopMost = true;
             tlpMain.ResumeLayout(false);
             tlpMain.PerformLayout();
+            tlpScanAgg.ResumeLayout(false);
+            tlpScanAgg.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)tbAggression).EndInit();
             ResumeLayout(false);
         }
@@ -201,5 +256,8 @@
         private MaskedTextBox mtbMaxFileSize;
         private MaskedTextBox mtbMemCeiling;
         private HelpProvider hpMain;
+        private TableLayoutPanel tlpScanAgg;
+        private Label lblMin;
+        private Label lblMax;
     }
 }
