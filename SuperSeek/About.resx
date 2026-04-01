@@ -117,15 +117,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <metadata name="hpMain.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    <value>17, 17</value>
-  </metadata>
-  <data name="lblScan.HelpString" xml:space="preserve">
-    <value>How aggressive should Super Seek be when scanning file contents? By default, each file to be scanned will add 1ms to a timeframe that Super Seek will use to spread the scanning load. Each file will have a random delay within the calculated timeframe.</value>
-  </data>
-  <data name="tbAggression.HelpString" xml:space="preserve">
-    <value>How aggressive should Super Seek be when scanning file contents? By default, each file to be scanned will add 1ms to a timeframe that Super Seek will use to spread the scanning load. Each file will have a random delay within the calculated timeframe.</value>
-  </data>
   <assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
   <data name="$this.Icon" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>

@@ -2,6 +2,7 @@ using SuperSeek.Properties;
 using System.Collections;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Reflection;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
 using Windows.Win32;
@@ -75,6 +76,7 @@ namespace SuperSeek
         public Main()
         {
             InitializeComponent();
+            Text = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title;
             new Thread(TimerThread).Start();
         }
 
@@ -124,6 +126,7 @@ namespace SuperSeek
 
         private void UpdateForm()
         {
+            var memWarnTheshold = Settings.MemoryCeiling / 2;
             try
             {
                 Invoke(() =>
@@ -156,6 +159,18 @@ namespace SuperSeek
                     if (CpuUsage >= 50)
                     {
                         tslCpuUsage.Image = Resources.speed_16dp_EA3323_FILL0_wght400_GRAD0_opsz20;
+                    }
+                    if (MemoryUsedB < memWarnTheshold)
+                    {
+                        tslMemory.Image = Resources.memory_16dp_8C1AF6_FILL0_wght400_GRAD0_opsz20;
+                    }
+                    if (MemoryUsedB > memWarnTheshold && MemoryUsedB < Settings.MemoryCeiling)
+                    {
+                        tslMemory.Image = Resources.memory_16dp_F19E39_FILL0_wght400_GRAD0_opsz20;
+                    }
+                    if (MemoryUsedB >= Settings.MemoryCeiling)
+                    {
+                        tslMemory.Image = Resources.memory_16dp_EA3323_FILL0_wght400_GRAD0_opsz20;
                     }
                     if (Running)
                     {
@@ -586,6 +601,11 @@ namespace SuperSeek
         private async void MiSettings_ClickAsync(object sender, EventArgs e)
         {
             await Settings.ShowDialogAsync(this);
+        }
+
+        private async void MiAbout_Click(object sender, EventArgs e)
+        {
+            await new About().ShowDialogAsync(this);
         }
     }
 }

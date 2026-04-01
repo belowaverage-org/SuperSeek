@@ -111,6 +111,7 @@
             // 
             lblMemCeiling.AutoSize = true;
             lblMemCeiling.Dock = DockStyle.Bottom;
+            lblMemCeiling.FlatStyle = FlatStyle.System;
             hpMain.SetHelpString(lblMemCeiling, "How much memory should Super Seek consume before throttling scans?");
             lblMemCeiling.Location = new Point(10, 140);
             lblMemCeiling.Margin = new Padding(0);
@@ -124,6 +125,7 @@
             // 
             lblMaxFileSize.AutoSize = true;
             lblMaxFileSize.Dock = DockStyle.Bottom;
+            lblMaxFileSize.FlatStyle = FlatStyle.System;
             hpMain.SetHelpString(lblMaxFileSize, "Max file size that Super Seek will scan.");
             lblMaxFileSize.Location = new Point(10, 78);
             lblMaxFileSize.Margin = new Padding(0);
@@ -137,6 +139,7 @@
             // 
             lblScan.AutoSize = true;
             lblScan.Dock = DockStyle.Bottom;
+            lblScan.FlatStyle = FlatStyle.System;
             hpMain.SetHelpString(lblScan, resources.GetString("lblScan.HelpString"));
             lblScan.Location = new Point(10, 16);
             lblScan.Margin = new Padding(0);
@@ -196,6 +199,7 @@
             // 
             lblMin.AutoSize = true;
             lblMin.Dock = DockStyle.Bottom;
+            lblMin.FlatStyle = FlatStyle.System;
             hpMain.SetHelpString(lblMin, "Lowest scan aggression, Each file to be scanned will add 2ms to the scan spread timeframe.");
             lblMin.Location = new Point(0, 16);
             lblMin.Margin = new Padding(0);
@@ -209,6 +213,7 @@
             // 
             lblMax.AutoSize = true;
             lblMax.Dock = DockStyle.Bottom;
+            lblMax.FlatStyle = FlatStyle.System;
             hpMain.SetHelpString(lblMax, "If set to max, scan aggression algorithm will not run, and Memory Ceiling will not be respected.");
             lblMax.Location = new Point(234, 16);
             lblMax.Margin = new Padding(0);
@@ -230,6 +235,7 @@
             Controls.Add(btnCancel);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             HelpButton = true;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "Settings";
