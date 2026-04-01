@@ -2,7 +2,7 @@
   <img width=256 height=256 src="https://github.com/belowaverage-org/SuperSeek/blob/master/SuperSeek/Resources/logo.png?raw=true">
 </p>
 
-# SuperSeek
+# Super Seek
 A High‑Performance File & Content Search Tool for Windows
 
 # OVERVIEW
